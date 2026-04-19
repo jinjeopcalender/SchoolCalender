@@ -338,7 +338,7 @@ export default function Home() {
           {/* 알림 팝업 */}
           {showNotifications && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
+              <div className="bg-white text-gray-900 rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
                 <h3 className="font-bold text-lg mb-4">🔔 새 일정 알림</h3>
 
                 {notifications.length === 0 ? (
@@ -381,7 +381,7 @@ export default function Home() {
           {/* 내 일정 추가 팝업 */}
           {selectedDate && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-96">
+              <div className="bg-white text-gray-900 rounded-lg p-6 w-96">
                 <h3 className="font-bold text-lg mb-4">📅 {selectedDate} 일정 추가</h3>
 
                 <input

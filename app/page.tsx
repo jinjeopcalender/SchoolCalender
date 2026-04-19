@@ -11,13 +11,10 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingPosts, setPendingPosts] = useState<any[]>([])
 
-  // 내 일정 추가
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [defaultDate, setDefaultDate] = useState('') // 🆕 날짜
-
-  // 다른 사용자 일정 수락 시 날짜
-  const [selectedDates, setSelectedDates] = useState<Record<string, string>>({}) // 🆕
+  // 팝업 상태
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [popupTitle, setPopupTitle] = useState('')
+  const [popupContent, setPopupContent] = useState('')
 
   useEffect(() => {
     const init = async () => {
@@ -110,22 +107,29 @@ export default function Home() {
     setUser(null)
   }
 
-  // 내 일정 추가 (날짜 포함)
+  // 캘린더 날짜 클릭 → 팝업 열기
+  const handleDateClick = (date: string) => {
+    setSelectedDate(date)
+    setPopupTitle('')
+    setPopupContent('')
+  }
+
+  // 팝업에서 내 일정 저장
   const submitPost = async () => {
-    if (!user) return
-    if (!defaultDate) {
-      alert('날짜를 선택해주세요!')
+    if (!user || !selectedDate) return
+    if (!popupTitle) {
+      alert('제목을 입력해주세요!')
       return
     }
 
     const { data: postData, error } = await supabase
       .from('posts')
       .insert({
-        title,
-        content,
+        title: popupTitle,
+        content: popupContent,
         status: 'pending',
         created_by: user.id,
-        default_date: defaultDate, // 🆕
+        default_date: selectedDate,
       })
       .select()
       .single()
@@ -135,40 +139,27 @@ export default function Home() {
       return
     }
 
-    // 내 캘린더에 자동 추가
     await supabase.from('user_calendar').insert({
       user_id: user.id,
       post_id: postData.id,
-      assigned_date: defaultDate, // 🆕 내가 입력한 날짜로 저장
+      assigned_date: selectedDate,
     })
 
-    setEvents(prev => [
-      ...prev,
-      { title, date: defaultDate },
-    ])
-
+    setEvents(prev => [...prev, { title: popupTitle, date: selectedDate }])
+    setSelectedDate(null)
     alert('내 캘린더에 추가됨!')
-    setTitle('')
-    setContent('')
-    setDefaultDate('')
   }
 
-  // 다른 사람 일정 수락 (날짜 직접 지정)
-  const addToCalendar = async (postId: string) => {
+  // 다른 사람 일정 수락 (2단계에서 날짜 선택 추가 예정)
+  const addToCalendar = async (postId: string, date: string) => {
     if (!user) return
-
-    const date = selectedDates[postId]
-    if (!date) {
-      alert('날짜를 선택해주세요!')
-      return
-    }
 
     const { error } = await supabase
       .from('user_calendar')
       .insert({
         user_id: user.id,
         post_id: postId,
-        assigned_date: date, // 🆕 내가 선택한 날짜
+        assigned_date: date,
       })
 
     if (error) {
@@ -267,20 +258,11 @@ export default function Home() {
             <div key={post.id} className="p-3 border mt-2 rounded">
               <p>{post.title}</p>
               <p className="text-sm text-gray-500">{post.content}</p>
-
-              {/* 🆕 날짜 picker - default_date를 기본값으로 */}
-              <input
-                type="date"
-                value={selectedDates[post.id] || post.default_date || ''}
-                onChange={(e) =>
-                  setSelectedDates(prev => ({ ...prev, [post.id]: e.target.value }))
-                }
-                className="border p-2 w-full mt-2"
-              />
+              <p className="text-sm text-gray-400">기본 날짜: {post.default_date}</p>
 
               <div className="flex gap-2 mt-2">
                 <button
-                  onClick={() => addToCalendar(post.id)}
+                  onClick={() => addToCalendar(post.id, post.default_date)}
                   className="px-3 py-1 bg-blue-500 text-white rounded"
                 >
                   추가
@@ -295,41 +277,46 @@ export default function Home() {
             </div>
           ))}
 
-          <Calendar events={events} />
+          {/* 캘린더 */}
+          <Calendar events={events} onDateClick={handleDateClick} />
 
-          {/* 내 일정 추가 */}
-          <div className="mt-8 p-4 border rounded">
-            <h3 className="font-bold mb-2">📅 내 일정 추가하기</h3>
+          {/* 날짜 클릭 팝업 */}
+          {selectedDate && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-96">
+                <h3 className="font-bold text-lg mb-4">📅 {selectedDate} 일정 추가</h3>
 
-            <input
-              placeholder="제목"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="border p-2 w-full mb-2"
-            />
+                <input
+                  placeholder="제목"
+                  value={popupTitle}
+                  onChange={(e) => setPopupTitle(e.target.value)}
+                  className="border p-2 w-full mb-2 rounded"
+                />
 
-            <textarea
-              placeholder="내용"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="border p-2 w-full mb-2"
-            />
+                <textarea
+                  placeholder="내용 (선택)"
+                  value={popupContent}
+                  onChange={(e) => setPopupContent(e.target.value)}
+                  className="border p-2 w-full mb-4 rounded"
+                />
 
-            {/* 🆕 날짜 picker */}
-            <input
-              type="date"
-              value={defaultDate}
-              onChange={(e) => setDefaultDate(e.target.value)}
-              className="border p-2 w-full mb-2"
-            />
-
-            <button
-              onClick={submitPost}
-              className="px-4 py-2 bg-green-500 text-white rounded"
-            >
-              저장
-            </button>
-          </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="px-4 py-2 bg-gray-200 rounded"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={submitPost}
+                    className="px-4 py-2 bg-green-500 text-white rounded"
+                  >
+                    저장
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -156,11 +156,14 @@ export default function Home() {
 
     const { error } = await supabase
       .from('user_calendar')
-      .insert({
-        user_id: user.id,
-        post_id: postId,
-        assigned_date: date,
-      })
+      .upsert(
+        {
+          user_id: user.id,
+          post_id: postId,
+          assigned_date: date,
+        },
+        { onConflict: 'user_id,post_id' }
+      )
 
     if (error) {
       alert('에러: ' + error.message)

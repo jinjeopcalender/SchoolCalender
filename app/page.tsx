@@ -6,20 +6,23 @@ import Calendar from '@/components/Calendar'
 
 export default function Home() {
   const [user, setUser] = useState<any>(null)
-  const [posts, setPosts] = useState<any[]>([])
   const [events, setEvents] = useState<any[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingPosts, setPendingPosts] = useState<any[]>([])
 
+  // 내 일정 추가 팝업
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [popupTitle, setPopupTitle] = useState('')
   const [popupContent, setPopupContent] = useState('')
 
+  // 알림 시스템
   const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
 
+  // 날짜 선택 대기 중인 일정
   const [pendingPostId, setPendingPostId] = useState<string | null>(null)
   const [pendingPostTitle, setPendingPostTitle] = useState<string | null>(null)
+  const [pendingNotifId, setPendingNotifId] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -48,32 +51,7 @@ export default function Home() {
 
       setIsAdmin(userData?.role === 'admin')
 
-      const { data: postsData } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('status', 'approved')
-
-      const { data: actions } = await supabase
-        .from('user_actions')
-        .select('post_id')
-        .eq('user_id', currentUser.id)
-
-      const { data: calendar } = await supabase
-        .from('user_calendar')
-        .select('post_id')
-        .eq('user_id', currentUser.id)
-
-      const dismissedIds = actions?.map(a => a.post_id) || []
-      const calendarIds = calendar?.map(c => c.post_id) || []
-
-      const filteredPosts = (postsData || []).filter(post =>
-        !dismissedIds.includes(post.id) &&
-        !calendarIds.includes(post.id) &&
-        post.created_by !== currentUser.id
-      )
-
-      setPosts(filteredPosts)
-
+      // 캘린더 데이터
       const { data: calendarData } = await supabase
         .from('user_calendar')
         .select('assigned_date, posts(title)')
@@ -86,14 +64,17 @@ export default function Home() {
 
       setEvents(formattedEvents)
 
+      // 알림 조회 (dismissed 제외 — pending, held 모두 가져옴)
       const { data: notifData } = await supabase
         .from('notifications')
         .select('*, posts(id, title, content, default_date)')
         .eq('user_id', currentUser.id)
-        .eq('is_read', false)
+        .neq('status', 'dismissed')
+        .neq('status', 'accepted')
 
       setNotifications(notifData || [])
 
+      // 관리자 pending 목록
       if (userData?.role === 'admin') {
         const { data: pending } = await supabase
           .from('posts')
@@ -161,19 +142,15 @@ export default function Home() {
     alert('내 캘린더에 추가됨!')
   }
 
-  const selectNotificationPost = (notif: any) => {
+  // '일정에 추가' → 날짜 선택 모드 진입
+  const acceptNotification = (notif: any) => {
     setPendingPostId(notif.posts.id)
     setPendingPostTitle(notif.posts.title)
+    setPendingNotifId(notif.id)
     setShowNotifications(false)
-    supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notif.id)
-      .then(() => {
-        setNotifications(prev => prev.filter(n => n.id !== notif.id))
-      })
   }
 
+  // 날짜 선택 완료 → 캘린더에 저장
   const addNotificationToCalendar = async (postId: string, date: string) => {
     if (!user) return
 
@@ -190,17 +167,46 @@ export default function Home() {
       return
     }
 
+    // 알림 accepted 처리
+    if (pendingNotifId) {
+      await supabase
+        .from('notifications')
+        .update({ status: 'accepted', is_read: true })
+        .eq('id', pendingNotifId)
+    }
+
     setEvents(prev => [...prev, { title: pendingPostTitle, date }])
-    setPosts(prev => prev.filter(p => p.id !== postId))
+    setNotifications(prev => prev.filter(n => n.id !== pendingNotifId))
     setPendingPostId(null)
     setPendingPostTitle(null)
-    alert('캘린더에 추가됨!')
+    setPendingNotifId(null)
+    alert('캘린더에 추가됐어요!')
   }
 
+  // 날짜 선택 취소 → 알림 목록으로 돌아감 (알림 유지)
+  const cancelDateSelection = () => {
+    setPendingPostId(null)
+    setPendingPostTitle(null)
+    setPendingNotifId(null)
+  }
+
+  // '보류' → held 상태로 저장, 알림함에서 언제든 다시 확인 가능
+  const holdNotification = async (notif: any) => {
+    await supabase
+      .from('notifications')
+      .update({ status: 'held' })
+      .eq('id', notif.id)
+
+    setNotifications(prev =>
+      prev.map(n => n.id === notif.id ? { ...n, status: 'held' } : n)
+    )
+  }
+
+  // '수락 안 함' → dismissed
   const dismissNotification = async (notif: any) => {
     await supabase
       .from('notifications')
-      .update({ is_read: true })
+      .update({ status: 'dismissed', is_read: true })
       .eq('id', notif.id)
 
     await supabase.from('user_actions').insert({
@@ -235,8 +241,10 @@ export default function Home() {
     setPendingPosts(prev => prev.filter(p => p.id !== postId))
   }
 
-  // 이름 줄이기: 너무 길면 앞 이름만
   const displayName = user?.user_metadata?.full_name?.split(' ')[0] ?? ''
+
+  const activeNotifications = notifications.filter(n => n.status === 'pending')
+  const heldNotifications = notifications.filter(n => n.status === 'held')
 
   return (
     <div className="px-3 py-4 max-w-lg mx-auto">
@@ -252,15 +260,13 @@ export default function Home() {
         </div>
       ) : (
         <>
-          {/* 상단 헤더 - 모바일 최적화 */}
+          {/* 상단 헤더 */}
           <div className="flex items-center justify-between mb-3">
-            {/* 왼쪽: 이름 + 역할 */}
             <p className="text-sm font-semibold truncate max-w-[120px]">
               {displayName}
               {isAdmin && <span className="ml-1 text-xs text-blue-500">(관리자)</span>}
             </p>
 
-            {/* 오른쪽: 알림 + 로그아웃 */}
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setShowNotifications(true)}
@@ -323,10 +329,10 @@ export default function Home() {
                 추가할 날짜를 캘린더에서 선택해주세요
               </p>
               <button
-                onClick={() => { setPendingPostId(null); setPendingPostTitle(null) }}
+                onClick={cancelDateSelection}
                 className="mt-1 text-xs text-gray-400 underline"
               >
-                취소
+                취소 (알림으로 돌아가기)
               </button>
             </div>
           )}
@@ -342,32 +348,71 @@ export default function Home() {
           {showNotifications && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
               <div className="bg-white text-gray-900 rounded-t-2xl p-5 w-full max-h-[75vh] overflow-y-auto">
-                <h3 className="font-bold text-base mb-3">🔔 새 일정 알림</h3>
+                <h3 className="font-bold text-base mb-3">🔔 알림</h3>
 
-                {notifications.length === 0 ? (
+                {activeNotifications.length === 0 && heldNotifications.length === 0 ? (
                   <p className="text-gray-400 text-sm">새 알림이 없어요</p>
                 ) : (
-                  notifications.map((notif) => (
-                    <div key={notif.id} className="p-3 border rounded-xl mt-2">
-                      <p className="font-medium text-sm">{notif.posts.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{notif.posts.content}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => selectNotificationPost(notif)}
-                          className="flex-1 py-1.5 bg-blue-500 text-white rounded-lg text-sm"
-                        >
-                          날짜 선택해서 추가
-                        </button>
-                        <button
-                          onClick={() => dismissNotification(notif)}
-                          className="flex-1 py-1.5 bg-gray-200 rounded-lg text-sm"
-                        >
-                          거부
-                        </button>
+                  <>
+                    {/* 새 알림 */}
+                    {activeNotifications.map((notif) => (
+                      <div key={notif.id} className="p-3 border rounded-xl mt-2">
+                        <p className="font-medium text-sm">{notif.posts.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{notif.posts.content}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <button
+                            onClick={() => acceptNotification(notif)}
+                            className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium"
+                          >
+                            📅 일정에 추가
+                          </button>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => holdNotification(notif)}
+                              className="flex-1 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg text-sm"
+                            >
+                              ⏸ 보류
+                            </button>
+                            <button
+                              onClick={() => dismissNotification(notif)}
+                              className="flex-1 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-sm"
+                            >
+                              ✕ 수락 안 함
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+
+                    {/* 보류된 알림 */}
+                    {heldNotifications.length > 0 && (
+                      <>
+                        <p className="text-xs text-gray-400 mt-4 mb-1 font-medium">⏸ 보류된 알림</p>
+                        {heldNotifications.map((notif) => (
+                          <div key={notif.id} className="p-3 border border-yellow-200 bg-yellow-50 rounded-xl mt-2">
+                            <p className="font-medium text-sm text-gray-800">{notif.posts.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{notif.posts.content}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
+                            <div className="flex flex-col gap-1.5 mt-2">
+                              <button
+                                onClick={() => acceptNotification(notif)}
+                                className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium"
+                              >
+                                📅 일정에 추가
+                              </button>
+                              <button
+                                onClick={() => dismissNotification(notif)}
+                                className="w-full py-1.5 bg-gray-200 text-gray-600 rounded-lg text-sm"
+                              >
+                                ✕ 수락 안 함
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
                 )}
 
                 <button

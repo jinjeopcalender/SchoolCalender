@@ -11,16 +11,13 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingPosts, setPendingPosts] = useState<any[]>([])
 
-  // 내 일정 추가 팝업
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [popupTitle, setPopupTitle] = useState('')
   const [popupContent, setPopupContent] = useState('')
 
-  // 알림 시스템
   const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
 
-  // 날짜 선택 대기 중인 일정 (알림에서 선택한 것)
   const [pendingPostId, setPendingPostId] = useState<string | null>(null)
   const [pendingPostTitle, setPendingPostTitle] = useState<string | null>(null)
 
@@ -43,7 +40,6 @@ export default function Home() {
         name: currentUser.user_metadata.full_name,
       })
 
-      // role 조회
       const { data: userData } = await supabase
         .from('users')
         .select('role')
@@ -52,7 +48,6 @@ export default function Home() {
 
       setIsAdmin(userData?.role === 'admin')
 
-      // approved 게시글 조회
       const { data: postsData } = await supabase
         .from('posts')
         .select('*')
@@ -79,7 +74,6 @@ export default function Home() {
 
       setPosts(filteredPosts)
 
-      // 캘린더 데이터
       const { data: calendarData } = await supabase
         .from('user_calendar')
         .select('assigned_date, posts(title)')
@@ -92,7 +86,6 @@ export default function Home() {
 
       setEvents(formattedEvents)
 
-      // 알림 조회 (unread만)
       const { data: notifData } = await supabase
         .from('notifications')
         .select('*, posts(id, title, content, default_date)')
@@ -101,7 +94,6 @@ export default function Home() {
 
       setNotifications(notifData || [])
 
-      // 관리자 pending 목록
       if (userData?.role === 'admin') {
         const { data: pending } = await supabase
           .from('posts')
@@ -124,20 +116,16 @@ export default function Home() {
     setUser(null)
   }
 
-  // 내 일정 추가 - 캘린더 날짜 클릭
   const handleDateClick = (date: string) => {
-    // 알림에서 일정 선택 후 날짜 고르는 중이면
     if (pendingPostId) {
       addNotificationToCalendar(pendingPostId, date)
       return
     }
-    // 일반 일정 추가
     setSelectedDate(date)
     setPopupTitle('')
     setPopupContent('')
   }
 
-  // 내 일정 저장
   const submitPost = async () => {
     if (!user || !selectedDate) return
     if (!popupTitle) {
@@ -173,12 +161,10 @@ export default function Home() {
     alert('내 캘린더에 추가됨!')
   }
 
-  // 알림에서 일정 선택 → 날짜 선택 대기 모드
   const selectNotificationPost = (notif: any) => {
     setPendingPostId(notif.posts.id)
     setPendingPostTitle(notif.posts.title)
     setShowNotifications(false)
-    // 알림 읽음 처리
     supabase
       .from('notifications')
       .update({ is_read: true })
@@ -188,7 +174,6 @@ export default function Home() {
       })
   }
 
-  // 날짜 선택 후 캘린더에 저장
   const addNotificationToCalendar = async (postId: string, date: string) => {
     if (!user) return
 
@@ -212,7 +197,6 @@ export default function Home() {
     alert('캘린더에 추가됨!')
   }
 
-  // 알림 일정 거부
   const dismissNotification = async (notif: any) => {
     await supabase
       .from('notifications')
@@ -251,77 +235,96 @@ export default function Home() {
     setPendingPosts(prev => prev.filter(p => p.id !== postId))
   }
 
+  // 이름 줄이기: 너무 길면 앞 이름만
+  const displayName = user?.user_metadata?.full_name?.split(' ')[0] ?? ''
+
   return (
-    <div className="p-6">
+    <div className="px-3 py-4 max-w-lg mx-auto">
       {!user ? (
-        <button onClick={login}>로그인</button>
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+          <h1 className="text-2xl font-bold">📅 학교 캘린더</h1>
+          <button
+            onClick={login}
+            className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium text-base"
+          >
+            Google로 로그인
+          </button>
+        </div>
       ) : (
         <>
-          {/* 상단 헤더 */}
-          <div className="flex items-center justify-between">
-            <p>{user.user_metadata.full_name}({isAdmin ? '관리자' : ''})님</p>
+          {/* 상단 헤더 - 모바일 최적화 */}
+          <div className="flex items-center justify-between mb-3">
+            {/* 왼쪽: 이름 + 역할 */}
+            <p className="text-sm font-semibold truncate max-w-[120px]">
+              {displayName}
+              {isAdmin && <span className="ml-1 text-xs text-blue-500">(관리자)</span>}
+            </p>
 
-            <div className="flex items-center gap-4">
-              {/* 알림 배지 */}
+            {/* 오른쪽: 알림 + 로그아웃 */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setShowNotifications(true)}
-                className="relative px-3 py-1 bg-gray-100 rounded"
+                className="relative px-3 py-1.5 bg-gray-100 rounded-lg text-sm"
               >
-                🔔 알림
+                🔔
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
                     {notifications.length}
                   </span>
                 )}
               </button>
-
-              <button onClick={logout}>로그아웃</button>
+              <button
+                onClick={logout}
+                className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm"
+              >
+                로그아웃
+              </button>
             </div>
           </div>
 
           {/* 관리자 승인 패널 */}
           {isAdmin && (
-            <div className="mt-10 p-4 border rounded">
-              <h2 className="text-xl font-bold">🛠 관리자 승인</h2>
+            <div className="mb-4 p-3 border rounded-xl">
+              <h2 className="text-base font-bold mb-2">🛠 관리자 승인</h2>
 
-              {pendingPosts.length === 0 && (
-                <p className="text-sm text-gray-400 mt-2">대기 중인 일정이 없어요</p>
-              )}
-
-              {pendingPosts.map((post) => (
-                <div key={post.id} className="p-3 border mt-2 rounded">
-                  <p>{post.title}</p>
-                  <p className="text-sm">{post.content}</p>
-                  <p className="text-sm text-gray-400">날짜: {post.default_date}</p>
-
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => approvePost(post.id)}
-                      className="px-3 py-1 bg-green-500 text-white rounded"
-                    >
-                      승인
-                    </button>
-                    <button
-                      onClick={() => rejectPost(post.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded"
-                    >
-                      거절
-                    </button>
+              {pendingPosts.length === 0 ? (
+                <p className="text-xs text-gray-400">대기 중인 일정이 없어요</p>
+              ) : (
+                pendingPosts.map((post) => (
+                  <div key={post.id} className="p-2 border mt-2 rounded-lg">
+                    <p className="font-medium text-sm">{post.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{post.content}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">날짜: {post.default_date}</p>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => approvePost(post.id)}
+                        className="flex-1 py-1.5 bg-green-500 text-white rounded-lg text-sm"
+                      >
+                        승인
+                      </button>
+                      <button
+                        onClick={() => rejectPost(post.id)}
+                        className="flex-1 py-1.5 bg-red-500 text-white rounded-lg text-sm"
+                      >
+                        거절
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
 
-          {/* 날짜 선택 대기 중 안내 */}
+          {/* 날짜 선택 대기 안내 */}
           {pendingPostId && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-center justify-between">
-              <p className="text-blue-700">
-                <strong>"{pendingPostTitle}"</strong> 일정을 추가할 날짜를 캘린더에서 선택해주세요
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <p className="text-blue-700 text-sm">
+                <strong className="block truncate">"{pendingPostTitle}"</strong>
+                추가할 날짜를 캘린더에서 선택해주세요
               </p>
               <button
                 onClick={() => { setPendingPostId(null); setPendingPostTitle(null) }}
-                className="text-gray-400 text-sm ml-4"
+                className="mt-1 text-xs text-gray-400 underline"
               >
                 취소
               </button>
@@ -337,29 +340,28 @@ export default function Home() {
 
           {/* 알림 팝업 */}
           {showNotifications && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white text-gray-900 rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-                <h3 className="font-bold text-lg mb-4">🔔 새 일정 알림</h3>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+              <div className="bg-white text-gray-900 rounded-t-2xl p-5 w-full max-h-[75vh] overflow-y-auto">
+                <h3 className="font-bold text-base mb-3">🔔 새 일정 알림</h3>
 
                 {notifications.length === 0 ? (
                   <p className="text-gray-400 text-sm">새 알림이 없어요</p>
                 ) : (
                   notifications.map((notif) => (
-                    <div key={notif.id} className="p-3 border rounded mt-2">
-                      <p className="font-medium">{notif.posts.title}</p>
-                      <p className="text-sm text-gray-500">{notif.posts.content}</p>
-                      <p className="text-sm text-gray-400">기본 날짜: {notif.posts.default_date}</p>
-
+                    <div key={notif.id} className="p-3 border rounded-xl mt-2">
+                      <p className="font-medium text-sm">{notif.posts.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{notif.posts.content}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => selectNotificationPost(notif)}
-                          className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
+                          className="flex-1 py-1.5 bg-blue-500 text-white rounded-lg text-sm"
                         >
                           날짜 선택해서 추가
                         </button>
                         <button
                           onClick={() => dismissNotification(notif)}
-                          className="px-3 py-1 bg-gray-200 rounded text-sm"
+                          className="flex-1 py-1.5 bg-gray-200 rounded-lg text-sm"
                         >
                           거부
                         </button>
@@ -370,7 +372,7 @@ export default function Home() {
 
                 <button
                   onClick={() => setShowNotifications(false)}
-                  className="mt-4 w-full py-2 bg-gray-100 rounded"
+                  className="mt-4 w-full py-2.5 bg-gray-100 rounded-xl text-sm"
                 >
                   닫기
                 </button>
@@ -380,34 +382,35 @@ export default function Home() {
 
           {/* 내 일정 추가 팝업 */}
           {selectedDate && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white text-gray-900 rounded-lg p-6 w-96">
-                <h3 className="font-bold text-lg mb-4">📅 {selectedDate} 일정 추가</h3>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+              <div className="bg-white text-gray-900 rounded-t-2xl p-5 w-full">
+                <h3 className="font-bold text-base mb-4">📅 {selectedDate} 일정 추가</h3>
 
                 <input
                   placeholder="제목"
                   value={popupTitle}
                   onChange={(e) => setPopupTitle(e.target.value)}
-                  className="border p-2 w-full mb-2 rounded"
+                  className="border p-2.5 w-full mb-2 rounded-xl text-sm"
                 />
 
                 <textarea
                   placeholder="내용 (선택)"
                   value={popupContent}
                   onChange={(e) => setPopupContent(e.target.value)}
-                  className="border p-2 w-full mb-4 rounded"
+                  className="border p-2.5 w-full mb-4 rounded-xl text-sm"
+                  rows={3}
                 />
 
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2">
                   <button
                     onClick={() => setSelectedDate(null)}
-                    className="px-4 py-2 bg-gray-200 rounded"
+                    className="flex-1 py-2.5 bg-gray-200 rounded-xl text-sm"
                   >
                     취소
                   </button>
                   <button
                     onClick={submitPost}
-                    className="px-4 py-2 bg-green-500 text-white rounded"
+                    className="flex-1 py-2.5 bg-green-500 text-white rounded-xl text-sm font-medium"
                   >
                     저장
                   </button>

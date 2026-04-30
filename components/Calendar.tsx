@@ -19,10 +19,7 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         </p>
       )}
       <style>{`
-        /* FullCalendar 모바일 최적화 */
-        .fc {
-          font-size: 0.75rem;
-        }
+        .fc { font-size: 0.75rem; }
         .fc .fc-toolbar {
           flex-wrap: wrap;
           gap: 6px;
@@ -37,14 +34,11 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
           padding: 4px 8px !important;
           font-size: 0.7rem !important;
         }
-        .fc .fc-daygrid-day {
-          min-height: 40px !important;
-        }
+        .fc .fc-daygrid-day { min-height: 40px !important; }
         .fc .fc-daygrid-day-number {
           font-size: 0.75rem;
           padding: 2px 4px !important;
         }
-        /* 이벤트 텍스트 줄바꿈 방지 */
         .fc .fc-daygrid-event {
           white-space: nowrap;
           overflow: hidden;
@@ -52,19 +46,15 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
           font-size: 0.65rem !important;
           padding: 1px 3px !important;
           border-radius: 4px;
+          cursor: pointer;
         }
         .fc .fc-col-header-cell-cushion {
           font-size: 0.7rem;
           padding: 4px 2px !important;
         }
-        /* 요일 헤더 한 글자로 줄이기 */
         @media (max-width: 480px) {
-          .fc .fc-toolbar {
-            justify-content: space-between;
-          }
-          .fc .fc-daygrid-day {
-            min-height: 36px !important;
-          }
+          .fc .fc-toolbar { justify-content: space-between; }
+          .fc .fc-daygrid-day { min-height: 36px !important; }
         }
       `}</style>
       <FullCalendar
@@ -72,6 +62,11 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         initialView="dayGridMonth"
         events={events}
         dateClick={(info) => onDateClick(info.dateStr)}
+        eventClick={(info) => {
+          // 이벤트 클릭 시 해당 날짜의 팝업 열기
+          const dateStr = info.event.startStr.split('T')[0]
+          onDateClick(dateStr)
+        }}
         headerToolbar={{
           left: 'prev',
           center: 'title',

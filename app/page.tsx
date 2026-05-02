@@ -86,6 +86,23 @@ export default function Home() {
   }, [])
 
   const loadCalendarData = async (uid: string, grade: number, admin: boolean) => {
+    // 새 유저를 위한 학교행사 자동 추가
+    const { data: schoolPosts } = await supabase
+      .from('posts')
+      .select('id, default_date')
+      .eq('status', 'approved')
+      .eq('category', '학교행사')
+      .or(`grade.is.null,grade.eq.${grade}`)
+
+    if (schoolPosts && schoolPosts.length > 0) {
+      const inserts = schoolPosts.map(p => ({
+        user_id: uid,
+        post_id: p.id,
+        assigned_date: p.default_date,
+      }))
+      await supabase.from('user_calendar').upsert(inserts, { onConflict: 'user_id,post_id' })
+    }
+
     const { data: calendarData } = await supabase
       .from('user_calendar')
       .select('assigned_date, posts(id, title, content, category)')
@@ -285,7 +302,7 @@ export default function Home() {
     if (error) { alert(error.message); return }
 
     // 대상 유저 조회
-    let usersQuery = supabase.from('users').select('id').neq('id', user.id)
+    let usersQuery = supabase.from('users').select('id')
     if (schoolEventGrade) usersQuery = usersQuery.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await usersQuery
 

@@ -285,7 +285,7 @@ export default function Home() {
     if (error) { alert(error.message); return }
 
     // 대상 유저 조회
-    let usersQuery = supabase.from('users').select('id')
+    let usersQuery = supabase.from('users').select('id').neq('id', user.id)
     if (schoolEventGrade) usersQuery = usersQuery.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await usersQuery
 

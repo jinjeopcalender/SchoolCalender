@@ -11,7 +11,7 @@ type Category = '수행평가' | '기타'
 const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
   '수행평가': { badge: 'bg-blue-100 text-blue-700', color: '#3b82f6' },
   '학교행사': { badge: 'bg-green-100 text-green-700', color: '#10b981' },
-  '기타':    { badge: 'bg-purple-100 text-purple-700', color: '#8b5cf6' },
+  '기타': { badge: 'bg-purple-100 text-purple-700', color: '#8b5cf6' },
 }
 
 const getCategoryBadge = (cat: string) => CATEGORY_STYLES[cat]?.badge ?? 'bg-gray-100 text-gray-600'
@@ -295,7 +295,11 @@ export default function Home() {
         post_id: postData.id,
         assigned_date: schoolEventDate,
       }))
-      await supabase.from('user_calendar').upsert(calendarInserts, { onConflict: 'user_id,post_id' })
+      const { error: calError } = await supabase
+        .from('user_calendar')
+        .upsert(calendarInserts, { onConflict: 'user_id,post_id' })
+
+      if (calError) { alert('캘린더 에러: ' + calError.message); return }
     }
 
     setShowSchoolEventForm(false)

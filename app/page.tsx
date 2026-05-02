@@ -171,23 +171,23 @@ export default function Home() {
         event: 'INSERT', schema: 'public', table: 'user_calendar',
         filter: `user_id=eq.${uid}`,
       }, async (payload) => {
-        // 새로 추가된 캘린더 항목 posts 정보 가져오기
-        const { data: item } = await supabase
-          .from('user_calendar')
-          .select('assigned_date, posts(id, title, content, category)')
-          .eq('id', payload.new.id)
+        // payload.new에서 post 정보 별도 조회
+        const { data: postInfo } = await supabase
+          .from('posts')
+          .select('id, title, content, category')
+          .eq('id', payload.new.post_id)
           .single()
-        if (item) {
+
+        if (postInfo) {
           const newEvent = {
-            id: (item.posts as any).id,
-            title: (item.posts as any).title,
-            content: (item.posts as any).content,
-            category: (item.posts as any).category,
-            date: item.assigned_date,
-            color: getCategoryColor((item.posts as any).category),
+            id: postInfo.id,
+            title: postInfo.title,
+            content: postInfo.content,
+            category: postInfo.category,
+            date: payload.new.assigned_date,
+            color: getCategoryColor(postInfo.category),
           }
           setEvents(prev => {
-            // 중복 방지
             if (prev.some(e => e.id === newEvent.id)) return prev
             return [...prev, newEvent]
           })
@@ -339,6 +339,18 @@ export default function Home() {
     setSchoolEventContent('')
     setSchoolEventDate('')
     setSchoolEventGrade(null)
+
+    // 관리자 본인 캘린더에 즉시 반영
+    const newEvent = {
+      id: postData.id,
+      title: schoolEventTitle,
+      content: schoolEventContent,
+      category: '학교행사',
+      date: schoolEventDate,
+      color: getCategoryColor('학교행사'),
+    }
+    setEvents(prev => [...prev, newEvent])
+
     alert('학교 행사가 추가됐어요!')
   }
 

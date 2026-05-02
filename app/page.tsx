@@ -86,6 +86,25 @@ export default function Home() {
   }, [])
 
   const loadCalendarData = async (uid: string, grade: number, admin: boolean) => {
+    // 새 유저를 위한 기존 알림 자동 생성
+    const { data: missedPosts } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('status', 'approved')
+      .eq('is_user_generated', true)
+      .or(`grade.is.null,grade.eq.${grade}`)
+      .neq('created_by', uid)
+
+    if (missedPosts && missedPosts.length > 0) {
+      const notifInserts = missedPosts.map(p => ({
+        user_id: uid,
+        post_id: p.id,
+        is_read: false,
+      }))
+      await supabase
+        .from('notifications')
+        .upsert(notifInserts, { onConflict: 'user_id,post_id' })
+    }
     // 새 유저를 위한 학교행사 자동 추가
     const { data: schoolPosts } = await supabase
       .from('posts')

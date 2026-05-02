@@ -295,11 +295,7 @@ export default function Home() {
         post_id: postData.id,
         assigned_date: schoolEventDate,
       }))
-      const { error: calError } = await supabase
-        .from('user_calendar')
-        .upsert(calendarInserts, { onConflict: 'user_id,post_id' })
-
-      if (calError) { alert('캘린더 에러: ' + calError.message); return }
+      await supabase.from('user_calendar').insert(calendarInserts)
     }
 
     setShowSchoolEventForm(false)

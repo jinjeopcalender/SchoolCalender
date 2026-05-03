@@ -64,6 +64,15 @@ export default function Home() {
   const [teacherSubject, setTeacherSubject] = useState(SUBJECTS[0])
   const [teacherLocation, setTeacherLocation] = useState('')
   const [editingTeacher, setEditingTeacher] = useState<any>(null)
+  const [openSubjects, setOpenSubjects] = useState<Set<string>>(new Set())
+
+  const toggleSubject = (subject: string) => {
+    setOpenSubjects(prev => {
+      const next = new Set(prev)
+      next.has(subject) ? next.delete(subject) : next.add(subject)
+      return next
+    })
+  }
 
   // ─── 뒤로가기 처리 ───────────────────────────────────────────
   // 팝업이 열릴 때 history에 state를 push하고,
@@ -624,16 +633,19 @@ export default function Home() {
 
             {/* ─── 선생님 위치 탭 ─── */}
             {activeTab === 'teacher' && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base font-bold">🏫 선생님 위치</h2>
-                  {isAdmin && (
-                    <button onClick={openAddTeacher}
-                      className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium">
-                      + 선생님 추가
-                    </button>
-                  )}
-                </div>
+              <div className="flex flex-col gap-3">
+                {/* 관리자 패널 (캘린더 탭과 동일한 스타일) */}
+                {isAdmin && (
+                  <div className="p-3 border rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-base font-bold">🛠 관리자</h2>
+                      <button onClick={openAddTeacher}
+                        className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium">
+                        + 선생님 추가
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {teachers.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-48 gap-3 text-gray-400">
@@ -642,32 +654,49 @@ export default function Home() {
                     {isAdmin && <p className="text-xs">위 버튼으로 추가해보세요</p>}
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-4">
-                    {Object.entries(teachersBySubject).map(([subject, list]) => (
-                      <div key={subject} className="border rounded-xl overflow-hidden">
-                        <div className="bg-gray-50 px-3 py-2 border-b">
-                          <p className="text-sm font-bold text-gray-700">{subject}</p>
-                        </div>
-                        <div className="divide-y">
-                          {(list as any[]).map((t) => (
-                            <div key={t.id} className="px-3 py-2.5 flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium">{t.name} 선생님</p>
-                                <p className="text-xs text-gray-500 mt-0.5">📍 {t.location}</p>
-                              </div>
-                              {isAdmin && (
-                                <div className="flex gap-1.5 shrink-0">
-                                  <button onClick={() => openEditTeacher(t)}
-                                    className="text-xs px-2 py-1 bg-blue-50 text-blue-500 rounded-lg">수정</button>
-                                  <button onClick={() => deleteTeacher(t.id)}
-                                    className="text-xs px-2 py-1 bg-red-50 text-red-400 rounded-lg">삭제</button>
-                                </div>
-                              )}
+                  <div className="flex flex-col gap-2">
+                    {Object.entries(teachersBySubject).map(([subject, list]) => {
+                      const isOpen = openSubjects.has(subject)
+                      return (
+                        <div key={subject} className="border rounded-xl overflow-hidden">
+                          {/* 과목 헤더 — 탭하면 접기/펼치기 */}
+                          <button
+                            onClick={() => toggleSubject(subject)}
+                            className="w-full flex items-center justify-between px-3 py-3 bg-gray-50 active:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-gray-700">{subject}</p>
+                              <span className="text-xs text-gray-400 bg-gray-200 rounded-full px-1.5 py-0.5">
+                                {(list as any[]).length}명
+                              </span>
                             </div>
-                          ))}
+                            <span className={`text-gray-400 text-xs transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                          </button>
+
+                          {/* 선생님 목록 */}
+                          {isOpen && (
+                            <div className="divide-y">
+                              {(list as any[]).map((t) => (
+                                <div key={t.id} className="px-3 py-2.5 flex items-center justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium">{t.name} 선생님</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">📍 {t.location}</p>
+                                  </div>
+                                  {isAdmin && (
+                                    <div className="flex gap-1.5 shrink-0">
+                                      <button onClick={() => openEditTeacher(t)}
+                                        className="text-xs px-2 py-1 bg-blue-50 text-blue-500 rounded-lg">수정</button>
+                                      <button onClick={() => deleteTeacher(t.id)}
+                                        className="text-xs px-2 py-1 bg-red-50 text-red-400 rounded-lg">삭제</button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>

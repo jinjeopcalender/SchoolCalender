@@ -586,9 +586,9 @@ export default function Home() {
           </div>
 
           {/* 탭 콘텐츠 */}
-          <div className="flex-1 px-3 py-4 overflow-y-auto pb-20">
+          <div className="flex-1 overflow-y-auto pb-20">
             {activeTab === 'calendar' && (
-              <>
+              <div className="px-3 py-4">
                 {isAdmin && (
                   <div className="mb-4 p-3 border rounded-xl">
                     <div className="flex items-center justify-between mb-2">
@@ -628,16 +628,16 @@ export default function Home() {
                 </div>
 
                 <Calendar events={events} onDateClick={handleDateClick} pendingPostId={pendingPostId} />
-              </>
+              </div>
             )}
 
             {/* ─── 선생님 위치 탭 ─── */}
             {activeTab === 'teacher' && (
-              <div className="flex flex-col gap-3">
-                {/* 관리자 패널 (캘린더 탭과 동일한 스타일) */}
+              <div className="flex flex-col gap-0">
+                {/* 관리자 패널 */}
                 {isAdmin && (
-                  <div className="p-3 border rounded-xl">
-                    <div className="flex items-center justify-between">
+                  <div className="px-3 pt-4 pb-3">
+                    <div className="p-3 border rounded-xl flex items-center justify-between">
                       <h2 className="text-base font-bold">🛠 관리자</h2>
                       <button onClick={openAddTeacher}
                         className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium">
@@ -654,15 +654,15 @@ export default function Home() {
                     {isAdmin && <p className="text-xs">위 버튼으로 추가해보세요</p>}
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col">
                     {Object.entries(teachersBySubject).map(([subject, list]) => {
                       const isOpen = openSubjects.has(subject)
                       return (
-                        <div key={subject} className="border rounded-xl overflow-hidden">
-                          {/* 과목 헤더 — 탭하면 접기/펼치기 */}
+                        <div key={subject} className="border-b">
+                          {/* 과목 헤더 */}
                           <button
                             onClick={() => toggleSubject(subject)}
-                            className="w-full flex items-center justify-between px-3 py-3 bg-gray-50 active:bg-gray-100 transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 active:bg-gray-100 transition-colors"
                           >
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-bold text-gray-700">{subject}</p>
@@ -677,7 +677,7 @@ export default function Home() {
                           {isOpen && (
                             <div className="divide-y">
                               {(list as any[]).map((t) => (
-                                <div key={t.id} className="px-4 py-4 flex items-center justify-between">
+                                <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white">
                                   <div className="flex-1 min-w-0">
                                     <p className="text-base font-semibold">{t.name} 선생님</p>
                                     <p className="text-sm text-gray-500 mt-1">📍 {t.location}</p>

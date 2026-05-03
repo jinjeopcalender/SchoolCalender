@@ -64,7 +64,7 @@ export default function Home() {
   const [teacherSubject, setTeacherSubject] = useState(SUBJECTS[0])
   const [teacherLocation, setTeacherLocation] = useState('')
   const [editingTeacher, setEditingTeacher] = useState<any>(null)
-  const [openSubjects, setOpenSubjects] = useState<Set<string>>(new Set())
+  const [openSubjects, setOpenSubjects] = useState<Set<string>>(new Set(SUBJECTS))
 
   const toggleSubject = (subject: string) => {
     setOpenSubjects(prev => {
@@ -677,17 +677,17 @@ export default function Home() {
                           {isOpen && (
                             <div className="divide-y">
                               {(list as any[]).map((t) => (
-                                <div key={t.id} className="px-3 py-2.5 flex items-center justify-between">
+                                <div key={t.id} className="px-4 py-4 flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium">{t.name} 선생님</p>
-                                    <p className="text-xs text-gray-500 mt-0.5">📍 {t.location}</p>
+                                    <p className="text-base font-semibold">{t.name} 선생님</p>
+                                    <p className="text-sm text-gray-500 mt-1">📍 {t.location}</p>
                                   </div>
                                   {isAdmin && (
-                                    <div className="flex gap-1.5 shrink-0">
+                                    <div className="flex gap-2 shrink-0">
                                       <button onClick={() => openEditTeacher(t)}
-                                        className="text-xs px-2 py-1 bg-blue-50 text-blue-500 rounded-lg">수정</button>
+                                        className="text-xs px-3 py-1.5 bg-blue-50 text-blue-500 rounded-lg">수정</button>
                                       <button onClick={() => deleteTeacher(t.id)}
-                                        className="text-xs px-2 py-1 bg-red-50 text-red-400 rounded-lg">삭제</button>
+                                        className="text-xs px-3 py-1.5 bg-red-50 text-red-400 rounded-lg">삭제</button>
                                     </div>
                                   )}
                                 </div>

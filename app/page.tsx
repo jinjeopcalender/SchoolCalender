@@ -7,7 +7,6 @@ import Calendar from '@/components/Calendar'
 type Tab = 'calendar' | 'teacher'
 type Category = '수행평가' | '기타'
 
-// Tailwind 동적 클래스 문제 방지 — 정적으로 정의
 const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
   '수행평가': { badge: 'bg-blue-100 text-blue-700', color: '#3b82f6' },
   '학교행사': { badge: 'bg-green-100 text-green-700', color: '#10b981' },
@@ -16,6 +15,9 @@ const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
 
 const getCategoryBadge = (cat: string) => CATEGORY_STYLES[cat]?.badge ?? 'bg-gray-100 text-gray-600'
 const getCategoryColor = (cat: string) => CATEGORY_STYLES[cat]?.color ?? '#8b5cf6'
+
+// 과목 목록
+const SUBJECTS = ['국어', '수학', '영어', '과학', '사회', '역사', '도덕', '체육', '음악', '미술', '기술·가정', '정보', '한문', '기타']
 
 export default function Home() {
   const [user, setUser] = useState<any>(null)
@@ -34,7 +36,7 @@ export default function Home() {
   const [popupTitle, setPopupTitle] = useState('')
   const [popupContent, setPopupContent] = useState('')
   const [popupCategory, setPopupCategory] = useState<Category>('수행평가')
-  const [popupGrade, setPopupGrade] = useState<number | null>(null) // 관리자용
+  const [popupGrade, setPopupGrade] = useState<number | null>(null)
 
   // 관리자 학교행사 추가
   const [showSchoolEventForm, setShowSchoolEventForm] = useState(false)
@@ -54,6 +56,42 @@ export default function Home() {
   const pendingDefaultDateRef = useRef<string | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [pickerDate, setPickerDate] = useState<string>('')
+
+  // 선생님 위치
+  const [teachers, setTeachers] = useState<any[]>([])
+  const [showTeacherForm, setShowTeacherForm] = useState(false)
+  const [teacherName, setTeacherName] = useState('')
+  const [teacherSubject, setTeacherSubject] = useState(SUBJECTS[0])
+  const [teacherLocation, setTeacherLocation] = useState('')
+  const [editingTeacher, setEditingTeacher] = useState<any>(null)
+
+  // ─── 뒤로가기 처리 ───────────────────────────────────────────
+  // 팝업이 열릴 때 history에 state를 push하고,
+  // 브라우저 뒤로가기(popstate) 시 팝업을 닫는다.
+  const pushHistory = () => window.history.pushState({ popup: true }, '')
+
+  useEffect(() => {
+    const handlePopState = () => {
+      // 열려있는 팝업 순서대로 닫기
+      if (showTeacherForm) { setShowTeacherForm(false); resetTeacherForm(); return }
+      if (showSchoolEventForm) { setShowSchoolEventForm(false); return }
+      if (showDatePicker) { cancelDatePicker(); return }
+      if (showAddForm) { setShowAddForm(false); return }
+      if (showDatePopup) { closeDatePopup(); return }
+      if (showNotifications) { setShowNotifications(false); return }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [showTeacherForm, showSchoolEventForm, showDatePicker, showAddForm, showDatePopup, showNotifications])
+
+  // 팝업 열 때 history push
+  useEffect(() => { if (showNotifications) pushHistory() }, [showNotifications])
+  useEffect(() => { if (showDatePopup) pushHistory() }, [showDatePopup])
+  useEffect(() => { if (showAddForm) pushHistory() }, [showAddForm])
+  useEffect(() => { if (showDatePicker) pushHistory() }, [showDatePicker])
+  useEffect(() => { if (showSchoolEventForm) pushHistory() }, [showSchoolEventForm])
+  useEffect(() => { if (showTeacherForm) pushHistory() }, [showTeacherForm])
+  // ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     supabase.removeAllChannels()
@@ -80,6 +118,7 @@ export default function Home() {
 
       setUserGrade(userData.grade)
       await loadCalendarData(currentUser.id, userData.grade, admin)
+      await loadTeachers()
     }
     init()
     return () => { supabase.removeAllChannels() }
@@ -105,6 +144,7 @@ export default function Home() {
         .from('notifications')
         .upsert(notifInserts, { onConflict: 'user_id,post_id' })
     }
+
     // 새 유저를 위한 학교행사 자동 추가
     const { data: schoolPosts } = await supabase
       .from('posts')
@@ -164,14 +204,13 @@ export default function Home() {
       })
       .subscribe()
 
-    // Realtime - 학교행사 자동 추가 감지
+    // Realtime - 학교행사
     supabase
       .channel('user-calendar-channel')
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'user_calendar',
         filter: `user_id=eq.${uid}`,
       }, async (payload) => {
-        // payload.new에서 post 정보 별도 조회
         const { data: postInfo } = await supabase
           .from('posts')
           .select('id, title, content, category')
@@ -208,6 +247,65 @@ export default function Home() {
     }
   }
 
+  // ─── 선생님 위치 ─────────────────────────────────────────────
+  const loadTeachers = async () => {
+    const { data } = await supabase.from('teachers').select('*').order('subject').order('name')
+    setTeachers(data || [])
+  }
+
+  const resetTeacherForm = () => {
+    setTeacherName('')
+    setTeacherSubject(SUBJECTS[0])
+    setTeacherLocation('')
+    setEditingTeacher(null)
+  }
+
+  const openAddTeacher = () => {
+    resetTeacherForm()
+    setShowTeacherForm(true)
+  }
+
+  const openEditTeacher = (t: any) => {
+    setEditingTeacher(t)
+    setTeacherName(t.name)
+    setTeacherSubject(t.subject)
+    setTeacherLocation(t.location)
+    setShowTeacherForm(true)
+  }
+
+  const submitTeacher = async () => {
+    if (!teacherName.trim() || !teacherLocation.trim()) { alert('성함과 위치를 입력해주세요!'); return }
+
+    if (editingTeacher) {
+      const { error } = await supabase.from('teachers')
+        .update({ name: teacherName.trim(), subject: teacherSubject, location: teacherLocation.trim() })
+        .eq('id', editingTeacher.id)
+      if (error) { alert(error.message); return }
+    } else {
+      const { error } = await supabase.from('teachers')
+        .insert({ name: teacherName.trim(), subject: teacherSubject, location: teacherLocation.trim() })
+      if (error) { alert(error.message); return }
+    }
+
+    await loadTeachers()
+    setShowTeacherForm(false)
+    resetTeacherForm()
+  }
+
+  const deleteTeacher = async (id: string) => {
+    if (!confirm('삭제할까요?')) return
+    await supabase.from('teachers').delete().eq('id', id)
+    setTeachers(prev => prev.filter(t => t.id !== id))
+  }
+
+  // 과목별 그룹핑
+  const teachersBySubject = teachers.reduce((acc, t) => {
+    if (!acc[t.subject]) acc[t.subject] = []
+    acc[t.subject].push(t)
+    return acc
+  }, {} as Record<string, any[]>)
+  // ─────────────────────────────────────────────────────────────
+
   const selectGrade = async (grade: number) => {
     if (!user) return
     const { error } = await supabase.from('users').update({ grade }).eq('id', user.id)
@@ -215,6 +313,7 @@ export default function Home() {
     setUserGrade(grade)
     setShowGradePicker(false)
     await loadCalendarData(user.id, grade, isAdmin)
+    await loadTeachers()
   }
 
   const login = async () => {
@@ -255,12 +354,10 @@ export default function Home() {
     setPopupGrade(null)
   }
 
-  // 개인 일정 추가
   const submitPost = async () => {
     if (!user || !selectedDate) return
     if (!popupTitle) { alert('제목을 입력해주세요!'); return }
 
-    // 관리자는 학년 선택 필수
     const targetGrade = isAdmin ? popupGrade : userGrade
     if (!targetGrade) { alert('학년을 선택해주세요!'); return }
 
@@ -298,7 +395,6 @@ export default function Home() {
     setPopupContent('')
   }
 
-  // 관리자 학교행사 추가
   const submitSchoolEvent = async () => {
     if (!user || !schoolEventTitle || !schoolEventDate) {
       alert('제목과 날짜를 입력해주세요!'); return
@@ -320,7 +416,6 @@ export default function Home() {
 
     if (error) { alert(error.message); return }
 
-    // 대상 유저 조회
     let usersQuery = supabase.from('users').select('id')
     if (schoolEventGrade) usersQuery = usersQuery.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await usersQuery
@@ -340,7 +435,6 @@ export default function Home() {
     setSchoolEventDate('')
     setSchoolEventGrade(null)
 
-    // 관리자 본인 캘린더에 즉시 반영
     const newEvent = {
       id: postData.id,
       title: schoolEventTitle,
@@ -350,11 +444,9 @@ export default function Home() {
       color: getCategoryColor('학교행사'),
     }
     setEvents(prev => [...prev, newEvent])
-
     alert('학교 행사가 추가됐어요!')
   }
 
-  // 일정 삭제
   const deleteEvent = async (eventId: string) => {
     if (!user) return
     if (!confirm('이 일정을 삭제할까요?')) return
@@ -436,7 +528,6 @@ export default function Home() {
   const overlayClass = "fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end justify-center z-50"
   const sheetClass = "bg-white text-gray-900 rounded-t-2xl p-5 w-full max-w-lg"
 
-  // 학년 선택 화면
   if (user && showGradePicker) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6">
@@ -489,7 +580,6 @@ export default function Home() {
           <div className="flex-1 px-3 py-4 overflow-y-auto pb-20">
             {activeTab === 'calendar' && (
               <>
-                {/* 관리자 패널 */}
                 {isAdmin && (
                   <div className="mb-4 p-3 border rounded-xl">
                     <div className="flex items-center justify-between mb-2">
@@ -522,7 +612,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* 카테고리 범례 */}
                 <div className="flex gap-2 mb-3">
                   <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">수행평가</span>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">학교행사</span>
@@ -533,11 +622,54 @@ export default function Home() {
               </>
             )}
 
+            {/* ─── 선생님 위치 탭 ─── */}
             {activeTab === 'teacher' && (
-              <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400">
-                <p className="text-4xl">🏫</p>
-                <p className="text-sm font-medium">선생님 위치 안내</p>
-                <p className="text-xs">준비 중이에요</p>
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold">🏫 선생님 위치</h2>
+                  {isAdmin && (
+                    <button onClick={openAddTeacher}
+                      className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium">
+                      + 선생님 추가
+                    </button>
+                  )}
+                </div>
+
+                {teachers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-48 gap-3 text-gray-400">
+                    <p className="text-4xl">🏫</p>
+                    <p className="text-sm">등록된 선생님이 없어요</p>
+                    {isAdmin && <p className="text-xs">위 버튼으로 추가해보세요</p>}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {Object.entries(teachersBySubject).map(([subject, list]) => (
+                      <div key={subject} className="border rounded-xl overflow-hidden">
+                        <div className="bg-gray-50 px-3 py-2 border-b">
+                          <p className="text-sm font-bold text-gray-700">{subject}</p>
+                        </div>
+                        <div className="divide-y">
+                          {(list as any[]).map((t) => (
+                            <div key={t.id} className="px-3 py-2.5 flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium">{t.name} 선생님</p>
+                                <p className="text-xs text-gray-500 mt-0.5">📍 {t.location}</p>
+                              </div>
+                              {isAdmin && (
+                                <div className="flex gap-1.5 shrink-0">
+                                  <button onClick={() => openEditTeacher(t)}
+                                    className="text-xs px-2 py-1 bg-blue-50 text-blue-500 rounded-lg">수정</button>
+                                  <button onClick={() => deleteTeacher(t.id)}
+                                    className="text-xs px-2 py-1 bg-red-50 text-red-400 rounded-lg">삭제</button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -553,6 +685,56 @@ export default function Home() {
               <span className="text-xl">🏫</span>선생님 위치
             </button>
           </div>
+
+          {/* 선생님 추가/수정 팝업 */}
+          {showTeacherForm && (
+            <div className={overlayClass}>
+              <div className={`${sheetClass} max-h-[85vh] overflow-y-auto`}>
+                <h3 className="font-bold text-base mb-4">{editingTeacher ? '✏️ 선생님 수정' : '➕ 선생님 추가'}</h3>
+
+                <div className="mb-3">
+                  <p className="text-xs text-gray-400 mb-1.5">과목</p>
+                  <div className="flex flex-wrap gap-2">
+                    {SUBJECTS.map(s => (
+                      <button key={s} onClick={() => setTeacherSubject(s)}
+                        className={`px-3 py-1.5 rounded-xl text-xs border-2 transition-colors ${teacherSubject === s ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 text-gray-600'}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs text-gray-400 mb-1.5">선생님 성함</p>
+                  <input
+                    placeholder="예: 홍길동"
+                    value={teacherName}
+                    onChange={(e) => setTeacherName(e.target.value)}
+                    className="border p-2.5 w-full rounded-xl text-sm"
+                  />
+                </div>
+
+                <div className="mb-5">
+                  <p className="text-xs text-gray-400 mb-1.5">교무실 위치</p>
+                  <input
+                    placeholder="예: 3층 국어 교무실"
+                    value={teacherLocation}
+                    onChange={(e) => setTeacherLocation(e.target.value)}
+                    className="border p-2.5 w-full rounded-xl text-sm"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => { setShowTeacherForm(false); resetTeacherForm() }}
+                    className="flex-1 py-2.5 bg-gray-200 rounded-xl text-sm">취소</button>
+                  <button onClick={submitTeacher}
+                    className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium">
+                    {editingTeacher ? '수정' : '추가'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 학교행사 추가 팝업 */}
           {showSchoolEventForm && (
@@ -703,7 +885,6 @@ export default function Home() {
                         ))}
                       </div>
                     </div>
-                    {/* 관리자는 학년 선택 */}
                     {isAdmin && (
                       <div className="mb-2">
                         <p className="text-xs text-gray-400 mb-1.5">대상 학년</p>

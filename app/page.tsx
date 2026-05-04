@@ -536,8 +536,8 @@ export default function Home() {
   const activeNotifications = notifications.filter(n => n.status === 'pending')
   const heldNotifications = notifications.filter(n => n.status === 'held')
 
-  const overlayClass = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50"
-  const sheetClass = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg"
+  const overlayClass = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in"
+  const sheetClass = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
 
   if (user && showGradePicker) {
     return (
@@ -547,7 +547,7 @@ export default function Home() {
         <div className="flex flex-col gap-3 w-full max-w-xs">
           {[1, 2, 3].map(g => (
             <button key={g} onClick={() => selectGrade(g)}
-              className="py-4 bg-blue-500 text-white rounded-2xl text-lg font-bold">
+              className="btn py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-lg font-bold shadow-md shadow-blue-200 dark:shadow-blue-900/30">
               {g}학년
             </button>
           ))}
@@ -561,7 +561,7 @@ export default function Home() {
       {!user ? (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6">
           <h1 className="text-2xl font-bold">📅 학교 캘린더</h1>
-          <button onClick={login} className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium text-base w-full max-w-xs">
+          <button onClick={login} className="btn px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold text-base w-full max-w-xs shadow-md shadow-blue-200 dark:shadow-blue-900/30">
             Google로 로그인
           </button>
         </div>
@@ -582,15 +582,15 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex items-center gap-2 md:w-full">
-                <button onClick={() => setShowNotifications(true)} className="relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">
+                <button onClick={() => setShowNotifications(true)} className="btn relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">
                   🔔 <span className="hidden md:inline text-xs">알림</span>
                   {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                    <span className="badge-pulse absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
                       {notifications.length}
                     </span>
                   )}
                 </button>
-                <button onClick={logout} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">로그아웃</button>
+                <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">로그아웃</button>
               </div>
             </div>
 
@@ -618,7 +618,7 @@ export default function Home() {
                       <div className="flex items-center justify-between mb-2">
                         <h2 className="text-base font-bold">🛠 관리자</h2>
                         <button onClick={() => setShowSchoolEventForm(true)}
-                          className="px-3 py-1 bg-green-500 text-white rounded-lg text-xs font-medium">
+                          className="btn px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium shadow-sm">
                           + 학교 행사
                         </button>
                       </div>
@@ -636,8 +636,8 @@ export default function Home() {
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{post.content}</p>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">날짜: {post.default_date}</p>
                             <div className="flex gap-2 mt-2">
-                              <button onClick={() => approvePost(post.id)} className="flex-1 py-1.5 bg-green-500 text-white rounded-lg text-sm">승인</button>
-                              <button onClick={() => rejectPost(post.id)} className="flex-1 py-1.5 bg-red-500 text-white rounded-lg text-sm">거절</button>
+                              <button onClick={() => approvePost(post.id)} className="btn flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow-sm">승인</button>
+                              <button onClick={() => rejectPost(post.id)} className="btn flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow-sm">거절</button>
                             </div>
                           </div>
                         ))
@@ -663,7 +663,7 @@ export default function Home() {
                       <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-between bg-white dark:bg-gray-900">
                         <h2 className="text-base font-bold">🛠 관리자</h2>
                         <button onClick={openAddTeacher}
-                          className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium">
+                          className="btn px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium shadow-sm">
                           + 선생님 추가
                         </button>
                       </div>
@@ -739,258 +739,258 @@ export default function Home() {
         </div>
       )}
 
-          {/* 선생님 추가/수정 팝업 */}
-          {showTeacherForm && (
-            <div className={overlayClass}>
-              <div className={`${sheetClass} max-h-[85vh] overflow-y-auto`}>
-                <h3 className="font-bold text-base mb-4">{editingTeacher ? '✏️ 선생님 수정' : '➕ 선생님 추가'}</h3>
+      {/* 선생님 추가/수정 팝업 */}
+      {showTeacherForm && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[85vh] overflow-y-auto`}>
+            <h3 className="font-bold text-base mb-4">{editingTeacher ? '✏️ 선생님 수정' : '➕ 선생님 추가'}</h3>
 
-                <div className="mb-3">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">과목</p>
-                  <div className="flex flex-wrap gap-2">
-                    {SUBJECTS.map(s => (
-                      <button key={s} onClick={() => setTeacherSubject(s)}
-                        className={`px-3 py-1.5 rounded-xl text-xs border-2 transition-colors ${teacherSubject === s ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">선생님 성함</p>
-                  <input
-                    placeholder="예: 홍길동"
-                    value={teacherName}
-                    onChange={(e) => setTeacherName(e.target.value)}
-                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm"
-                  />
-                </div>
-
-                <div className="mb-5">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">교무실 위치</p>
-                  <input
-                    placeholder="예: 3층 국어 교무실"
-                    value={teacherLocation}
-                    onChange={(e) => setTeacherLocation(e.target.value)}
-                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button onClick={() => { setShowTeacherForm(false); resetTeacherForm() }}
-                    className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
-                  <button onClick={submitTeacher}
-                    className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium">
-                    {editingTeacher ? '수정' : '추가'}
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">과목</p>
+              <div className="flex flex-wrap gap-2">
+                {SUBJECTS.map(s => (
+                  <button key={s} onClick={() => setTeacherSubject(s)}
+                    className={`px-3 py-1.5 rounded-xl text-xs border-2 transition-colors ${teacherSubject === s ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {s}
                   </button>
-                </div>
+                ))}
               </div>
             </div>
-          )}
 
-          {/* 학교행사 추가 팝업 */}
-          {showSchoolEventForm && (
-            <div className={overlayClass}>
-              <div className={`${sheetClass} max-h-[80vh] overflow-y-auto`}>
-                <h3 className="font-bold text-base mb-4">🏫 학교 행사 추가</h3>
-                <input placeholder="행사 제목" value={schoolEventTitle}
-                  onChange={(e) => setSchoolEventTitle(e.target.value)}
-                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-2 rounded-xl text-sm" />
-                <textarea placeholder="내용 (선택)" value={schoolEventContent}
-                  onChange={(e) => setSchoolEventContent(e.target.value)}
-                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-2 rounded-xl text-sm" rows={2} />
-                <div className="mb-2">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">날짜</p>
-                  <input type="date" value={schoolEventDate}
-                    onChange={(e) => setSchoolEventDate(e.target.value)}
-                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm" />
-                </div>
-                <div className="mb-4">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
-                  <div className="flex gap-2">
-                    {[{ label: '전체', val: null }, { label: '1학년', val: 1 }, { label: '2학년', val: 2 }, { label: '3학년', val: 3 }].map(({ label, val }) => (
-                      <button key={label} onClick={() => setSchoolEventGrade(val)}
-                        className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventGrade === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowSchoolEventForm(false)} className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
-                  <button onClick={submitSchoolEvent} className="flex-1 py-2.5 bg-green-500 text-white rounded-xl text-sm font-medium">추가</button>
-                </div>
-              </div>
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">선생님 성함</p>
+              <input
+                placeholder="예: 홍길동"
+                value={teacherName}
+                onChange={(e) => setTeacherName(e.target.value)}
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm"
+              />
             </div>
-          )}
 
-          {/* 알림 팝업 */}
-          {showNotifications && (
-            <div className={overlayClass}>
-              <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
-                <h3 className="font-bold text-base mb-3">🔔 알림</h3>
+            <div className="mb-5">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">교무실 위치</p>
+              <input
+                placeholder="예: 3층 국어 교무실"
+                value={teacherLocation}
+                onChange={(e) => setTeacherLocation(e.target.value)}
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm"
+              />
+            </div>
 
-                {/* 탭 전환 */}
-                <div className="flex border rounded-xl overflow-hidden mb-4">
-                  <button
-                    onClick={() => setNotifTab('active')}
-                    className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab === 'active' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                    새 알림 {activeNotifications.length > 0 && `(${activeNotifications.length})`}
+            <div className="flex gap-2">
+              <button onClick={() => { setShowTeacherForm(false); resetTeacherForm() }}
+                className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
+              <button onClick={submitTeacher}
+                className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium">
+                {editingTeacher ? '수정' : '추가'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학교행사 추가 팝업 */}
+      {showSchoolEventForm && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[80vh] overflow-y-auto`}>
+            <h3 className="font-bold text-base mb-4">🏫 학교 행사 추가</h3>
+            <input placeholder="행사 제목" value={schoolEventTitle}
+              onChange={(e) => setSchoolEventTitle(e.target.value)}
+              className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-2 rounded-xl text-sm" />
+            <textarea placeholder="내용 (선택)" value={schoolEventContent}
+              onChange={(e) => setSchoolEventContent(e.target.value)}
+              className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-2 rounded-xl text-sm" rows={2} />
+            <div className="mb-2">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">날짜</p>
+              <input type="date" value={schoolEventDate}
+                onChange={(e) => setSchoolEventDate(e.target.value)}
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm" />
+            </div>
+            <div className="mb-4">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
+              <div className="flex gap-2">
+                {[{ label: '전체', val: null }, { label: '1학년', val: 1 }, { label: '2학년', val: 2 }, { label: '3학년', val: 3 }].map(({ label, val }) => (
+                  <button key={label} onClick={() => setSchoolEventGrade(val)}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventGrade === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {label}
                   </button>
-                  <button
-                    onClick={() => setNotifTab('held')}
-                    className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab === 'held' ? 'bg-yellow-400 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                    보류 {heldNotifications.length > 0 && `(${heldNotifications.length})`}
-                  </button>
-                </div>
-
-                {/* 새 알림 탭 */}
-                {notifTab === 'active' && (
-                  activeNotifications.length === 0 ? (
-                    <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-6">새 알림이 없어요</p>
-                  ) : (
-                    activeNotifications.map((notif) => (
-                      <div key={notif.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-xl mt-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
-                        <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
-                        <div className="flex flex-col gap-1.5 mt-2">
-                          <button onClick={() => acceptNotification(notif)} className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium">📅 일정에 추가</button>
-                          <div className="flex gap-1.5">
-                            <button onClick={() => holdNotification(notif)} className="flex-1 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">⏸ 보류</button>
-                            <button onClick={() => dismissNotification(notif)} className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )
-                )}
-
-                {/* 보류 탭 */}
-                {notifTab === 'held' && (
-                  heldNotifications.length === 0 ? (
-                    <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-6">보류된 알림이 없어요</p>
-                  ) : (
-                    heldNotifications.map((notif) => (
-                      <div key={notif.id} className="p-3 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl mt-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
-                        <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
-                        <div className="flex flex-col gap-1.5 mt-2">
-                          <button onClick={() => acceptNotification(notif)} className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium">📅 일정에 추가</button>
-                          <button onClick={() => dismissNotification(notif)} className="w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
-                        </div>
-                      </div>
-                    ))
-                  )
-                )}
-
-                <button onClick={() => setShowNotifications(false)} className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
+                ))}
               </div>
             </div>
-          )}
-
-          {/* 날짜 선택 팝업 */}
-          {showDatePicker && (
-            <div className={overlayClass}>
-              <div className={sheetClass}>
-                <h3 className="font-bold text-base mb-1">📅 날짜 선택</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">"{pendingPostTitleRef.current}"</p>
-                {pendingDefaultDateRef.current && (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">추천 날짜</p>
-                    <button onClick={() => setPickerDate(pendingDefaultDateRef.current!)}
-                      className={`w-full py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${pickerDate === pendingDefaultDateRef.current ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-gray-800 text-blue-500 border-blue-300 dark:border-blue-700'}`}>
-                      {pendingDefaultDateRef.current} (기본 날짜)
-                    </button>
-                  </div>
-                )}
-                <div className="mb-4">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">직접 선택</p>
-                  <input type="date" value={pickerDate} onChange={(e) => setPickerDate(e.target.value)}
-                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm" />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={cancelDatePicker} className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
-                  <button onClick={confirmDatePicker} className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium">추가</button>
-                </div>
-              </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowSchoolEventForm(false)} className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
+              <button onClick={submitSchoolEvent} className="btn flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium shadow-md shadow-green-200 dark:shadow-green-900/30">추가</button>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          {/* 날짜 클릭 팝업 */}
-          {showDatePopup && selectedDate && (
-            <div className={overlayClass}>
-              <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
-                <h3 className="font-bold text-base mb-3">📅 {selectedDate}</h3>
-                {selectedDateEvents.length === 0 ? (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">이날 일정이 없어요</p>
-                ) : (
-                  <div className="mb-3 flex flex-col gap-2">
-                    {selectedDateEvents.map((event) => (
-                      <div key={event.id} className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
-                          <p className="font-medium text-sm mt-0.5">{event.title}</p>
-                          {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
-                        </div>
-                        {event.category !== '학교행사' && (
-                          <button onClick={() => deleteEvent(event.id)}
-                            className="shrink-0 text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30">삭제</button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {showAddForm ? (
-                  <>
-                    <div className="mb-2">
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종류</p>
-                      <div className="flex gap-2">
-                        {(['수행평가', '기타'] as Category[]).map(cat => (
-                          <button key={cat} onClick={() => setPopupCategory(cat)}
-                            className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupCategory === cat ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                            {cat}
-                          </button>
-                        ))}
+      {/* 알림 팝업 */}
+      {showNotifications && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
+            <h3 className="font-bold text-base mb-3">🔔 알림</h3>
+
+            {/* 탭 전환 */}
+            <div className="flex border rounded-xl overflow-hidden mb-4">
+              <button
+                onClick={() => setNotifTab('active')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab === 'active' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                새 알림 {activeNotifications.length > 0 && `(${activeNotifications.length})`}
+              </button>
+              <button
+                onClick={() => setNotifTab('held')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab === 'held' ? 'bg-yellow-400 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                보류 {heldNotifications.length > 0 && `(${heldNotifications.length})`}
+              </button>
+            </div>
+
+            {/* 새 알림 탭 */}
+            {notifTab === 'active' && (
+              activeNotifications.length === 0 ? (
+                <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-6">새 알림이 없어요</p>
+              ) : (
+                activeNotifications.map((notif) => (
+                  <div key={notif.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl mt-2">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
+                    <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm shadow-blue-200 dark:shadow-blue-900/30">📅 일정에 추가</button>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => holdNotification(notif)} className="flex-1 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">⏸ 보류</button>
+                        <button onClick={() => dismissNotification(notif)} className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
                       </div>
                     </div>
-                    {isAdmin && (
-                      <div className="mb-2">
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
-                        <div className="flex gap-2">
-                          {[1, 2, 3].map(g => (
-                            <button key={g} onClick={() => setPopupGrade(g)}
-                              className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupGrade === g ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                              {g}학년
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                  </div>
+                ))
+              )
+            )}
+
+            {/* 보류 탭 */}
+            {notifTab === 'held' && (
+              heldNotifications.length === 0 ? (
+                <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-6">보류된 알림이 없어요</p>
+              ) : (
+                heldNotifications.map((notif) => (
+                  <div key={notif.id} className="card-hover p-3 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl mt-2">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
+                    <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm shadow-blue-200 dark:shadow-blue-900/30">📅 일정에 추가</button>
+                      <button onClick={() => dismissNotification(notif)} className="w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
+
+            <button onClick={() => setShowNotifications(false)} className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
+          </div>
+        </div>
+      )}
+
+      {/* 날짜 선택 팝업 */}
+      {showDatePicker && (
+        <div className={overlayClass}>
+          <div className={sheetClass}>
+            <h3 className="font-bold text-base mb-1">📅 날짜 선택</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">"{pendingPostTitleRef.current}"</p>
+            {pendingDefaultDateRef.current && (
+              <div className="mb-3">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">추천 날짜</p>
+                <button onClick={() => setPickerDate(pendingDefaultDateRef.current!)}
+                  className={`w-full py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${pickerDate === pendingDefaultDateRef.current ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-gray-800 text-blue-500 border-blue-300 dark:border-blue-700'}`}>
+                  {pendingDefaultDateRef.current} (기본 날짜)
+                </button>
+              </div>
+            )}
+            <div className="mb-4">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">직접 선택</p>
+              <input type="date" value={pickerDate} onChange={(e) => setPickerDate(e.target.value)}
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm" />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={cancelDatePicker} className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
+              <button onClick={confirmDatePicker} className="btn flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium shadow-md shadow-blue-200 dark:shadow-blue-900/30">추가</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 날짜 클릭 팝업 */}
+      {showDatePopup && selectedDate && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
+            <h3 className="font-bold text-base mb-3">📅 {selectedDate}</h3>
+            {selectedDateEvents.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">이날 일정이 없어요</p>
+            ) : (
+              <div className="mb-3 flex flex-col gap-2">
+                {selectedDateEvents.map((event) => (
+                  <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
+                      <p className="font-medium text-sm mt-0.5">{event.title}</p>
+                      {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
+                    </div>
+                    {event.category !== '학교행사' && (
+                      <button onClick={() => deleteEvent(event.id)}
+                        className="shrink-0 text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30">삭제</button>
                     )}
-                    <input placeholder="제목" value={popupTitle}
-                      onChange={(e) => setPopupTitle(e.target.value)}
-                      className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-2 rounded-xl text-sm" />
-                    <textarea placeholder="내용 (선택)" value={popupContent}
-                      onChange={(e) => setPopupContent(e.target.value)}
-                      className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-3 rounded-xl text-sm" rows={3} />
-                    <div className="flex gap-2">
-                      <button onClick={() => setShowAddForm(false)} className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
-                      <button onClick={submitPost} className="flex-1 py-2.5 bg-green-500 text-white rounded-xl text-sm font-medium">저장</button>
-                    </div>
-                  </>
-                ) : (
+                  </div>
+                ))}
+              </div>
+            )}
+            {showAddForm ? (
+              <>
+                <div className="mb-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종류</p>
                   <div className="flex gap-2">
-                    <button onClick={closeDatePopup} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
-                    <button onClick={() => setShowAddForm(true)} className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium">+ 일정 추가</button>
+                    {(['수행평가', '기타'] as Category[]).map(cat => (
+                      <button key={cat} onClick={() => setPopupCategory(cat)}
+                        className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupCategory === cat ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {isAdmin && (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
+                    <div className="flex gap-2">
+                      {[1, 2, 3].map(g => (
+                        <button key={g} onClick={() => setPopupGrade(g)}
+                          className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupGrade === g ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                          {g}학년
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
+                <input placeholder="제목" value={popupTitle}
+                  onChange={(e) => setPopupTitle(e.target.value)}
+                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-2 rounded-xl text-sm" />
+                <textarea placeholder="내용 (선택)" value={popupContent}
+                  onChange={(e) => setPopupContent(e.target.value)}
+                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full mb-3 rounded-xl text-sm" rows={3} />
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAddForm(false)} className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm">취소</button>
+                  <button onClick={submitPost} className="btn flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium shadow-md shadow-green-200 dark:shadow-green-900/30">저장</button>
+                </div>
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={closeDatePopup} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
+                <button onClick={() => setShowAddForm(true)} className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium">+ 일정 추가</button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

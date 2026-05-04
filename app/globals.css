@@ -24,3 +24,40 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FullCalendar 다크모드 */
+@media (prefers-color-scheme: dark) {
+  .fc {
+    color: #ededed !important;
+    background: transparent !important;
+  }
+  .fc .fc-scrollgrid,
+  .fc td,
+  .fc th {
+    border-color: #333 !important;
+  }
+  .fc .fc-col-header-cell-cushion,
+  .fc .fc-daygrid-day-number {
+    color: #ededed !important;
+  }
+  .fc .fc-daygrid-day.fc-day-today {
+    background: #1e293b !important;
+  }
+  .fc .fc-daygrid-day:not(.fc-day-today) {
+    background: transparent !important;
+  }
+  .fc .fc-button {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #ededed !important;
+  }
+  .fc .fc-button:hover {
+    background-color: #334155 !important;
+  }
+  .fc .fc-toolbar-title {
+    color: #ededed !important;
+  }
+  .fc .fc-day-other .fc-daygrid-day-number {
+    color: #555 !important;
+  }
+}

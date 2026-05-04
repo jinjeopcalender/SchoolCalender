@@ -318,12 +318,15 @@ export default function Home() {
 
   const submitMessage = async () => {
     if (!user || !msgTarget || !msgContent.trim()) { alert('내용을 입력해주세요!'); return }
+    // 관리자는 바로 approved, 일반 사용자는 pending
+    const status = isAdmin ? 'approved' : 'pending'
     const { error } = await supabase.from('messages').insert({
-      sender_id: user.id, teacher_id: msgTarget.id, content: msgContent.trim(), status: 'pending',
+      sender_id: user.id, teacher_id: msgTarget.id, content: msgContent.trim(), status,
     })
     if (error) { alert(error.message); return }
     setShowMsgForm(false); setMsgContent('')
-    alert('전송됐어요! 관리자 검토 후 선생님께 전달돼요.')
+    if (isAdmin) alert('메시지가 선생님께 바로 전달됐어요!')
+    else alert('전송됐어요! 관리자 검토 후 선생님께 전달돼요.')
   }
 
   const approveMessage = async (id: string) => {
@@ -681,8 +684,8 @@ export default function Home() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
                                       </div>
                                       <div className="flex gap-2 shrink-0">
-                                        {/* 학생 / 선생님: 메시지 보내기 */}
-                                        {!isAdmin && !(isTeacher && myTeacherRow?.id === t.id) && (
+                                        {/* 관리자가 아닌 본인 선생님 row가 아닌 경우 메시지 가능 */}
+                                        {!(isTeacher && myTeacherRow?.id === t.id) && (
                                           <button onClick={() => openMsgForm(t)}
                                             className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
                                             💬 메시지
@@ -734,7 +737,11 @@ export default function Home() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{msgTarget.name} 선생님 ({msgTarget.subject})</p>
             <div className="flex items-start gap-2 p-2.5 bg-orange-50 dark:bg-orange-900/20 rounded-xl mb-4">
               <span className="text-sm">⚠️</span>
-              <p className="text-xs text-orange-600 dark:text-orange-400">메시지는 관리자 검토 후 선생님께 전달돼요. 욕설이나 부적절한 내용은 차단될 수 있어요.</p>
+              <p className="text-xs text-orange-600 dark:text-orange-400">
+                {isAdmin
+                  ? '관리자 메시지는 선생님께 바로 전달돼요.'
+                  : '메시지는 관리자 검토 후 선생님께 전달돼요. 욕설이나 부적절한 내용은 차단될 수 있어요.'}
+              </p>
             </div>
             <textarea placeholder="선생님께 전할 내용을 입력해주세요" value={msgContent}
               onChange={e=>setMsgContent(e.target.value)} className={`${INPUT} mb-4`} rows={4} />

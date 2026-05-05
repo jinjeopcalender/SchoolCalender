@@ -150,11 +150,6 @@ export default function Home() {
       position: 'center',
     },
     {
-      title: '📅 캘린더',
-      desc: '추가된 일정은 다른 친구와 공유될 수 있어요. 개인적인 일은 개인 일정으로, 수행평가는 공유 일정으로 추가해주세요!',
-      position: 'center',
-    },
-    {
       title: '🔔 알림',
       desc: '선생님이나 관리자가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
       position: 'top',
@@ -2081,12 +2076,12 @@ export default function Home() {
               <>
                 {/* 개인 일정 토글 */}
                 <div className="flex items-center justify-between mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">🔒 개인 일정</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">나만 볼 수 있어요</p>
                   </div>
                   <button onClick={() => setPopupIsPersonal(p => !p)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${popupIsPersonal ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                    className={`shrink-0 ml-3 w-12 h-6 rounded-full transition-colors relative ${popupIsPersonal ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-700'}`}>
                     <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${popupIsPersonal ? 'translate-x-7' : 'translate-x-1'}`} />
                   </button>
                 </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Calendar from '@/components/Calendar'
+import ReactMarkdown from 'react-markdown'
 
 type Tab = 'calendar' | 'teacher'
 type Category = '수행평가' | '기타'
@@ -120,6 +121,15 @@ export default function Home() {
     setInstallPrompt(null)
   }
 
+  // 공지
+  const [notices,          setNotices]          = useState<any[]>([])
+  const [activeNoticeIdx,  setActiveNoticeIdx]  = useState(0)
+  const [showNoticePopup,  setShowNoticePopup]  = useState(false)
+  const [showNoticeForm,   setShowNoticeForm]   = useState(false)
+  const [noticeTitle,      setNoticeTitle]      = useState('')
+  const [noticeContent,    setNoticeContent]    = useState('')
+  const [noticePreview,    setNoticePreview]    = useState(false)
+
   // 튜토리얼
   const [showTutorial, setShowTutorial] = useState(false)
   const [tutorialStep, setTutorialStep] = useState(0)
@@ -199,6 +209,8 @@ export default function Home() {
 
   useEffect(() => {
     const handle = () => {
+      if (showNoticePopup)     { setShowNoticePopup(false); return }
+      if (showNoticeForm)       { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); return }
       if (showReplyForm)       { setShowReplyForm(false); setReplyContent(''); return }
       if (showSentMessages)    { setShowSentMessages(false); return }
       if (showMsgInbox)        { setShowMsgInbox(false); return }
@@ -214,7 +226,7 @@ export default function Home() {
     }
     window.addEventListener('popstate', handle)
     return () => window.removeEventListener('popstate', handle)
-  }, [showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
+  }, [showNoticePopup, showNoticeForm, showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
       showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications])
 
   useEffect(() => { if (showNotifications)   pushHistory() }, [showNotifications])
@@ -228,6 +240,7 @@ export default function Home() {
   useEffect(() => { if (showMsgForm)          pushHistory() }, [showMsgForm])
   useEffect(() => { if (showMsgInbox)         pushHistory() }, [showMsgInbox])
   useEffect(() => { if (showSentMessages)     pushHistory() }, [showSentMessages])
+  useEffect(() => { if (showNoticeForm)        pushHistory() }, [showNoticeForm])
   useEffect(() => { if (showReplyForm)        pushHistory() }, [showReplyForm])
   // ──────────────────────────────────────────────────────────────
 
@@ -241,6 +254,7 @@ export default function Home() {
       // 비로그인: 공개 데이터만 로드
       if (!cu) {
         await loadTeachers()
+        await loadNotices()
         const { data: schoolPosts } = await supabase.from('posts')
           .select('id, title, content, category, default_date, end_date')
           .eq('status', 'approved').in('category', ['학교행사', '휴일'])
@@ -276,6 +290,7 @@ export default function Home() {
       setIsTeacher(teacher)
 
       await loadTeachers()
+      await loadNotices()
 
       // 선생님: 본인 teachers row 연결 확인
       if (teacher) {
@@ -411,6 +426,60 @@ export default function Home() {
   const loadTeachers = async () => {
     const { data } = await supabase.from('teachers').select('*').order('subject').order('name')
     setTeachers(data || [])
+  }
+
+  const loadNotices = async () => {
+    const { data } = await supabase.from('notices')
+      .select('*').eq('is_active', true).order('created_at', { ascending: false })
+    if (!data?.length) return
+
+    // localStorage로 보지 않기 필터링
+    const visible = data.filter(n => {
+      const key = `notice_hide_${n.id}`
+      const hideUntil = localStorage.getItem(key)
+      if (!hideUntil) return true
+      return new Date(hideUntil) < new Date()
+    })
+    if (visible.length > 0) {
+      setNotices(visible)
+      setActiveNoticeIdx(0)
+      setShowNoticePopup(true)
+    }
+  }
+
+  const dismissNotice = (days: number) => {
+    const notice = notices[activeNoticeIdx]
+    if (!notice) return
+    const until = new Date()
+    until.setDate(until.getDate() + days)
+    localStorage.setItem(`notice_hide_${notice.id}`, until.toISOString())
+    // 다음 공지로
+    if (activeNoticeIdx < notices.length - 1) {
+      setActiveNoticeIdx(i => i + 1)
+    } else {
+      setShowNoticePopup(false)
+    }
+  }
+
+  const submitNotice = async () => {
+    if (!noticeTitle.trim() || !noticeContent.trim()) {
+      showToast('제목과 내용을 입력해주세요!', 'error'); return
+    }
+    const { error } = await supabase.from('notices').insert({
+      title: noticeTitle.trim(),
+      content: noticeContent.trim(),
+      created_by: user.id,
+    })
+    if (error) { showToast(error.message, 'error'); return }
+    showToast('공지가 등록됐어요!')
+    setShowNoticeForm(false)
+    setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false)
+  }
+
+  const deleteNotice = async (id: string) => {
+    if (!confirm('공지를 삭제할까요?')) return
+    await supabase.from('notices').update({ is_active: false }).eq('id', id)
+    showToast('공지가 삭제됐어요!')
   }
 
   const loadMessages = async (uid: string, admin: boolean, teacher: boolean, myT: any) => {
@@ -1274,10 +1343,16 @@ export default function Home() {
                     <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900">
                       <div className="flex items-center justify-between mb-3">
                         <h2 className="text-base font-bold">🛠 관리자</h2>
-                        <button onClick={() => setShowSchoolEventForm(true)}
-                          className="btn px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium shadow-sm">
-                          + 학교 일정
-                        </button>
+                        <div className="flex gap-2">
+                          <button onClick={() => setShowNoticeForm(true)}
+                            className="btn px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-medium shadow-sm">
+                            📢 공지
+                          </button>
+                          <button onClick={() => setShowSchoolEventForm(true)}
+                            className="btn px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium shadow-sm">
+                            + 학교 일정
+                          </button>
+                        </div>
                       </div>
 
                       {/* 메시지 승인 대기 */}
@@ -1918,6 +1993,103 @@ export default function Home() {
                 <button onClick={()=>setShowAddForm(true)} className={BTN_BLUE}>+ 일정 추가</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 공지 팝업 */}
+      {showNoticePopup && notices.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[150] animate-fade-in px-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md animate-pop-in overflow-hidden">
+            {/* 헤더 */}
+            <div className="bg-yellow-400 dark:bg-yellow-500 px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📢</span>
+                <p className="font-bold text-gray-900 text-base">{notices[activeNoticeIdx].title}</p>
+              </div>
+              {notices.length > 1 && (
+                <span className="text-xs text-gray-700 bg-white/40 px-2 py-0.5 rounded-full">
+                  {activeNoticeIdx + 1}/{notices.length}
+                </span>
+              )}
+            </div>
+
+            {/* 마크다운 내용 */}
+            <div className="px-5 py-4 max-h-[50vh] overflow-y-auto notice-md">
+              <ReactMarkdown>{notices[activeNoticeIdx].content}</ReactMarkdown>
+            </div>
+
+            {/* 관리자 삭제 버튼 */}
+            {isAdmin && (
+              <div className="px-5 pb-2">
+                <button onClick={() => { deleteNotice(notices[activeNoticeIdx].id); dismissNotice(0) }}
+                  className="text-xs text-red-400 hover:text-red-500">
+                  이 공지 삭제
+                </button>
+              </div>
+            )}
+
+            {/* 버튼 */}
+            <div className="px-5 pb-5 flex flex-col gap-2">
+              <div className="flex gap-2">
+                <button onClick={() => dismissNotice(1)}
+                  className="flex-1 py-2 text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  오늘 하루 보지 않기
+                </button>
+                <button onClick={() => dismissNotice(7)}
+                  className="flex-1 py-2 text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  일주일 보지 않기
+                </button>
+              </div>
+              <button onClick={() => {
+                if (activeNoticeIdx < notices.length - 1) setActiveNoticeIdx(i => i+1)
+                else setShowNoticePopup(false)
+              }} className="btn w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium rounded-xl text-sm shadow-sm">
+                {activeNoticeIdx < notices.length - 1 ? '다음 공지 →' : '확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 공지 작성 팝업 (관리자) */}
+      {showNoticeForm && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-base">📢 공지 작성</h3>
+              <button onClick={() => setNoticePreview(!noticePreview)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${noticePreview ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}>
+                {noticePreview ? '편집' : '미리보기'}
+              </button>
+            </div>
+
+            <input placeholder="공지 제목" value={noticeTitle}
+              onChange={e => setNoticeTitle(e.target.value)} className={`${INPUT} mb-3`} />
+
+            {noticePreview ? (
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 min-h-[200px] max-h-[40vh] overflow-y-auto mb-4 notice-md">
+                {noticeContent ? <ReactMarkdown>{noticeContent}</ReactMarkdown> : <p className="text-gray-400 text-sm">내용을 입력하면 여기에 미리보기가 나타나요</p>}
+              </div>
+            ) : (
+              <div className="mb-2">
+                <textarea
+                  placeholder={`마크다운 형식으로 작성해요\n\n예시:\n## 제목\n**굵게** / *기울임*\n[링크텍스트](https://URL)\n![이미지설명](https://이미지URL)\n- 목록 항목`}
+                  value={noticeContent}
+                  onChange={e => setNoticeContent(e.target.value)}
+                  className={`${INPUT} mb-1`} rows={10} />
+                <p className="text-xs text-gray-400 dark:text-gray-500">마크다운 지원: **굵게**, *기울임*, [링크](URL), ![이미지](URL), ## 제목</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false) }}
+                className={BTN_GRAY}>취소</button>
+              <button onClick={submitNotice}
+                className="btn flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-medium shadow-md">
+                공지 등록
+              </button>
+            </div>
           </div>
         </div>
       )}

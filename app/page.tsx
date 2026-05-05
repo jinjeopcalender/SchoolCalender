@@ -86,8 +86,11 @@ export default function Home() {
   const [pendingMessages, setPendingMessages] = useState<any[]>([]) // 관리자 승인 대기
   const [myMessages,      setMyMessages]      = useState<any[]>([]) // 선생님 수신함
   const [showMsgInbox,    setShowMsgInbox]    = useState(false)
-  const [sentMessages,    setSentMessages]    = useState<any[]>([]) // 학생 보낸 메시지함
+  const [inboxTab,        setInboxTab]        = useState<'unread'|'replied'>('unread')
+  const [sentMessages,    setSentMessages]    = useState<any[]>([]) // 학생/관리자 보낸 메시지함
   const [showSentMessages,setShowSentMessages]= useState(false)
+  const [sentPage,        setSentPage]        = useState(1)
+  const PAGE_SIZE = 10
   const [replyTarget,     setReplyTarget]     = useState<any>(null) // 답장할 메시지
   const [replyContent,    setReplyContent]    = useState('')
   const [showReplyForm,   setShowReplyForm]   = useState(false)
@@ -892,29 +895,59 @@ export default function Home() {
       {showMsgInbox && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
-            <h3 className="font-bold text-base mb-4">💬 수신된 메시지</h3>
-            {myMessages.length === 0
-              ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">수신된 메시지가 없어요</p>
-              : <div className="flex flex-col gap-3">
-                  {myMessages.map(m => (
-                    <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                        {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR')}
-                      </p>
-                      <p className="text-sm mb-2">{m.content}</p>
-                      {m.reply
-                        ? <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 text-xs text-emerald-700 dark:text-emerald-400">
-                            ↩ 답장 완료: {m.reply}
-                          </div>
-                        : <button onClick={() => openReplyForm(m)}
-                            className="btn text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                            ↩ 답장하기
-                          </button>
-                      }
-                    </div>
-                  ))}
-                </div>
-            }
+            <h3 className="font-bold text-base mb-3">💬 수신된 메시지</h3>
+
+            {/* 탭 */}
+            <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-4">
+              <button onClick={() => setInboxTab('unread')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab==='unread' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                미답장 {myMessages.filter(m=>!m.reply).length > 0 && `(${myMessages.filter(m=>!m.reply).length})`}
+              </button>
+              <button onClick={() => setInboxTab('replied')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab==='replied' ? 'bg-gray-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                답장 완료 {myMessages.filter(m=>m.reply).length > 0 && `(${myMessages.filter(m=>m.reply).length})`}
+              </button>
+            </div>
+
+            {/* 미답장 탭 */}
+            {inboxTab === 'unread' && (
+              myMessages.filter(m=>!m.reply).length === 0
+                ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">미답장 메시지가 없어요</p>
+                : <div className="flex flex-col gap-3">
+                    {myMessages.filter(m=>!m.reply).map(m => (
+                      <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                          {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' })}
+                        </p>
+                        <p className="text-sm mb-2">{m.content}</p>
+                        <button onClick={() => openReplyForm(m)}
+                          className="btn text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                          ↩ 답장하기
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+            )}
+
+            {/* 답장 완료 탭 */}
+            {inboxTab === 'replied' && (
+              myMessages.filter(m=>m.reply).length === 0
+                ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">답장한 메시지가 없어요</p>
+                : <div className="flex flex-col gap-3">
+                    {myMessages.filter(m=>m.reply).map(m => (
+                      <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                          {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' })}
+                        </p>
+                        <p className="text-sm mb-2">{m.content}</p>
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 text-xs text-emerald-700 dark:text-emerald-400">
+                          ↩ {m.reply}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+            )}
+
             <button onClick={()=>setShowMsgInbox(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
@@ -941,40 +974,48 @@ export default function Home() {
         </div>
       )}
 
-      {/* 학생 보낸 메시지함 */}
+      {/* 학생/관리자 보낸 메시지함 */}
       {showSentMessages && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
             <h3 className="font-bold text-base mb-4">💬 보낸 메시지</h3>
             {sentMessages.length === 0
               ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">보낸 메시지가 없어요</p>
-              : <div className="flex flex-col gap-3">
-                  {sentMessages.map(m => (
-                    <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
-                          {m.teachers?.name} 선생님 ({m.teachers?.subject}) · {new Date(m.created_at).toLocaleDateString('ko-KR')}
-                        </p>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                          m.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
-                          m.status === 'rejected' ? 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400' :
-                          'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}>
-                          {m.status === 'approved' ? '전달됨' : m.status === 'rejected' ? '거절됨' : '검토중'}
-                        </span>
-                      </div>
-                      <p className="text-sm">{m.content}</p>
-                      {m.reply && (
-                        <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
-                          <p className="text-xs text-blue-400 dark:text-blue-500 mb-0.5">↩ 선생님 답장</p>
-                          <p className="text-sm text-blue-700 dark:text-blue-300">{m.reply}</p>
+              : <>
+                  <div className="flex flex-col gap-3">
+                    {sentMessages.slice(0, sentPage * PAGE_SIZE).map(m => (
+                      <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            {m.teachers?.name} 선생님 ({m.teachers?.subject}) · {new Date(m.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' })}
+                          </p>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                            m.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                            m.status === 'rejected' ? 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400' :
+                            'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {m.status === 'approved' ? '전달됨' : m.status === 'rejected' ? '거절됨' : '검토중'}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        <p className="text-sm">{m.content}</p>
+                        {m.reply && (
+                          <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+                            <p className="text-xs text-blue-400 dark:text-blue-500 mb-0.5">↩ 선생님 답장</p>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">{m.reply}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {sentMessages.length > sentPage * PAGE_SIZE && (
+                    <button onClick={() => setSentPage(p => p + 1)}
+                      className="mt-3 w-full py-2.5 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm">
+                      더 보기 ({sentMessages.length - sentPage * PAGE_SIZE}개 남음)
+                    </button>
+                  )}
+                </>
             }
-            <button onClick={()=>setShowSentMessages(false)}
+            <button onClick={()=>{setShowSentMessages(false); setSentPage(1)}}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
         </div>

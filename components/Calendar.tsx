@@ -90,7 +90,7 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         contentHeight="auto"
         aspectRatio={1.2}
         locale="ko"
-        eventDisplay="auto"
+        eventDisplay="block"
       />
     </div>
   )

@@ -75,8 +75,11 @@ export default function Home() {
   const pendingPostTitleRef   = useRef<string | null>(null)
   const pendingNotifIdRef     = useRef<string | null>(null)
   const pendingDefaultDateRef = useRef<string | null>(null)
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [pickerDate,     setPickerDate]     = useState('')
+  const [showDatePicker,    setShowDatePicker]    = useState(false)
+  const [pickerDate,        setPickerDate]        = useState('')
+  const [pickerEndDate,     setPickerEndDate]     = useState('')
+  const [pickerDateType,    setPickerDateType]    = useState<'single'|'range'>('single')
+  const pendingEndDateRef = useRef<string | null>(null)
 
   // 선생님 관리
   const [teachers,        setTeachers]        = useState<any[]>([])
@@ -195,17 +198,16 @@ export default function Home() {
       await supabase.from('notifications')
         .upsert(missed.map(p => ({ user_id: uid, post_id: p.id, is_read: false })), { onConflict: 'user_id,post_id' })
 
-    // 새 유저 학교행사 자동 추가
-    const { data: school } = await supabase.from('posts').select('id, default_date')
-      .eq('status','approved').eq('category','학교행사').or(`grade.is.null,grade.eq.${grade}`)
+    // 새 유저 학교행사/쉬는날 자동 추가
+    const { data: school } = await supabase.from('posts').select('id, default_date, end_date, category')
+      .eq('status','approved').in('category',['학교행사','쉬는날']).or(`grade.is.null,grade.eq.${grade}`)
     if (school?.length)
       await supabase.from('user_calendar')
-        .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date })), { onConflict: 'user_id,post_id' })
+        .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date, end_date: p.end_date ?? null })), { onConflict: 'user_id,post_id' })
 
     const { data: cal } = await supabase
       .from('user_calendar').select('assigned_date, end_date, posts(id,title,content,category)').eq('user_id', uid)
     setEvents((cal||[]).map((item:any) => {
-      const isHoliday = item.posts.category === '쉬는날'
       // FullCalendar end는 exclusive이므로 하루 더 필요
       const endDateExclusive = item.end_date
         ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
@@ -216,10 +218,8 @@ export default function Home() {
         start: item.assigned_date,
         end: endDateExclusive,
         color: getCategoryColor(item.posts.category),
-        // 쉬는날은 배경도 빨갛게
-        display: isHoliday ? 'background' : 'block',
-        backgroundColor: isHoliday ? '#fef2f2' : undefined,
-        textColor: isHoliday ? '#ef4444' : undefined,
+        backgroundColor: getCategoryColor(item.posts.category),
+        borderColor: getCategoryColor(item.posts.category),
       }
     }))
 
@@ -258,7 +258,6 @@ export default function Home() {
           const { data: p } = await supabase.from('posts')
             .select('id,title,content,category').eq('id', payload.new.post_id).single()
           if (p) {
-            const isHoliday = p.category === '쉬는날'
             const endDateExclusive = payload.new.end_date
               ? (() => { const d = new Date(payload.new.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
               : undefined
@@ -266,9 +265,8 @@ export default function Home() {
               id:p.id, title:p.title, content:p.content, category:p.category,
               date:payload.new.assigned_date, start:payload.new.assigned_date, end:endDateExclusive,
               color:getCategoryColor(p.category),
-              display: isHoliday ? 'background' : 'block',
-              backgroundColor: isHoliday ? '#fef2f2' : undefined,
-              textColor: isHoliday ? '#ef4444' : undefined,
+              backgroundColor:getCategoryColor(p.category),
+              borderColor:getCategoryColor(p.category),
             }])
           }
         })
@@ -538,10 +536,8 @@ export default function Home() {
     }).select().single()
     if (error) { alert(error.message); return }
 
-    // 본인 캘린더에 추가 (선생님은 학년 없으므로 건너뜀)
-    if (!isTeacher) {
-      await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate, end_date:endDate })
-    }
+    // 본인 캘린더에 추가 (선생님도 포함)
+    await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate, end_date:endDate })
 
     // 선생님이 approved로 올리면 해당 학년 학생들에게 알림 직접 생성
     if (isTeacher) {
@@ -556,9 +552,7 @@ export default function Home() {
 
     const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
     const ev = { id:postData.id, title:popupTitle, content:popupContent, category:popupCategory, date:selectedDate, start:selectedDate, end:endExclusive, color:getCategoryColor(popupCategory) }
-    if (!isTeacher) {
-      setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
-    }
+    setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
     setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupDateType('single'); setPopupEndDate('')
     if (isTeacher) alert('일정이 등록됐어요! 해당 학년 학생들에게 알림이 전송됐어요.')
   }
@@ -577,15 +571,13 @@ export default function Home() {
     const { data: targetUsers } = await q
     if (targetUsers?.length)
       await supabase.from('user_calendar').insert(targetUsers.map(u=>({ user_id:u.id, post_id:postData.id, assigned_date:schoolEventDate, end_date:endDate })))
-    const isHoliday = schoolEventType === '쉬는날'
     const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
     setEvents(prev=>[...prev,{
       id:postData.id, title:schoolEventTitle, content:schoolEventContent, category:schoolEventType,
       date:schoolEventDate, start:schoolEventDate, end:endExclusive,
       color:getCategoryColor(schoolEventType),
-      display: isHoliday ? 'background' : 'block',
-      backgroundColor: isHoliday ? '#fef2f2' : undefined,
-      textColor: isHoliday ? '#ef4444' : undefined,
+      backgroundColor:getCategoryColor(schoolEventType),
+      borderColor:getCategoryColor(schoolEventType),
     }])
     setShowSchoolEventForm(false); setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventEndDate(''); setSchoolEventGrade(null); setSchoolEventType('학교행사'); setSchoolEventDateType('single')
     alert('학교 일정이 추가됐어요!')
@@ -598,26 +590,33 @@ export default function Home() {
   }
 
   const acceptNotification = (notif: any) => {
+    const hasRange = !!notif.posts.end_date
     setPendingPostId(notif.posts.id); pendingPostTitleRef.current=notif.posts.title
     pendingNotifIdRef.current=notif.id; pendingDefaultDateRef.current=notif.posts.default_date
-    setPickerDate(notif.posts.default_date||''); setShowNotifications(false); setShowDatePicker(true)
+    pendingEndDateRef.current=notif.posts.end_date||null
+    setPickerDate(notif.posts.default_date||'')
+    setPickerEndDate(notif.posts.end_date||'')
+    setPickerDateType(hasRange ? 'range' : 'single')
+    setShowNotifications(false); setShowDatePicker(true)
   }
 
   const confirmDatePicker = async () => {
     if (!user || !pickerDate) { alert('날짜를 선택해주세요!'); return }
+    if (pickerDateType === 'range' && !pickerEndDate) { alert('종료 날짜를 선택해주세요!'); return }
+    const endDate = pickerDateType === 'range' ? pickerEndDate : null
     const { error } = await supabase.from('user_calendar')
-      .upsert({ user_id:user.id, post_id:pendingPostId!, assigned_date:pickerDate }, { onConflict:'user_id,post_id' })
+      .upsert({ user_id:user.id, post_id:pendingPostId!, assigned_date:pickerDate, end_date:endDate }, { onConflict:'user_id,post_id' })
     if (error) { alert(error.message); return }
     if (pendingNotifIdRef.current)
       await supabase.from('notifications').update({ status:'accepted', is_read:true }).eq('id', pendingNotifIdRef.current)
     setNotifications(prev=>prev.filter(n=>n.id!==pendingNotifIdRef.current))
-    setPendingPostId(null); pendingPostTitleRef.current=null; pendingNotifIdRef.current=null; pendingDefaultDateRef.current=null
-    setShowDatePicker(false); setPickerDate('')
+    setPendingPostId(null); pendingPostTitleRef.current=null; pendingNotifIdRef.current=null; pendingDefaultDateRef.current=null; pendingEndDateRef.current=null
+    setShowDatePicker(false); setPickerDate(''); setPickerEndDate(''); setPickerDateType('single')
   }
 
   const cancelDatePicker = () => {
-    setPendingPostId(null); pendingPostTitleRef.current=null; pendingNotifIdRef.current=null; pendingDefaultDateRef.current=null
-    setShowDatePicker(false); setPickerDate('')
+    setPendingPostId(null); pendingPostTitleRef.current=null; pendingNotifIdRef.current=null; pendingDefaultDateRef.current=null; pendingEndDateRef.current=null
+    setShowDatePicker(false); setPickerDate(''); setPickerEndDate(''); setPickerDateType('single')
   }
 
   const holdNotification = async (notif: any) => {
@@ -868,6 +867,7 @@ export default function Home() {
                   <div className="flex gap-2 mb-3">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">수행평가</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">학교행사</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">쉬는날</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">기타</span>
                   </div>
                   <Calendar events={events} onDateClick={handleDateClick} pendingPostId={pendingPostId} />
@@ -1274,18 +1274,47 @@ export default function Home() {
           <div className={sheetClass}>
             <h3 className="font-bold text-base mb-1">📅 날짜 선택</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">"{pendingPostTitleRef.current}"</p>
+
+            {/* 하루/기간 선택 */}
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
+              <div className="flex gap-2">
+                {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
+                  <button key={val} onClick={()=>{ setPickerDateType(val); if(val==='single') setPickerEndDate('') }}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${pickerDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 추천 날짜 */}
             {pendingDefaultDateRef.current && (
               <div className="mb-3">
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">추천 날짜</p>
-                <button onClick={()=>setPickerDate(pendingDefaultDateRef.current!)}
+                <button onClick={()=>{
+                  setPickerDate(pendingDefaultDateRef.current!)
+                  if (pickerDateType === 'range' && pendingEndDateRef.current)
+                    setPickerEndDate(pendingEndDateRef.current)
+                }}
                   className={`w-full py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${pickerDate===pendingDefaultDateRef.current?'bg-blue-500 text-white border-blue-500':'bg-white dark:bg-gray-800 text-blue-500 border-blue-300 dark:border-blue-700'}`}>
-                  {pendingDefaultDateRef.current} (기본 날짜)
+                  {pendingDefaultDateRef.current}
+                  {pendingEndDateRef.current && pickerDateType === 'range' && ` ~ ${pendingEndDateRef.current}`}
+                  {' (기본 날짜)'}
                 </button>
               </div>
             )}
+
             <div className="mb-4">
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">직접 선택</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">시작 날짜</p>
               <input type="date" value={pickerDate} onChange={e=>setPickerDate(e.target.value)} className={INPUT} />
+              {pickerDateType === 'range' && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종료 날짜</p>
+                  <input type="date" value={pickerEndDate} onChange={e=>setPickerEndDate(e.target.value)}
+                    min={pickerDate} className={INPUT} />
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button onClick={cancelDatePicker} className={BTN_GRAY}>취소</button>

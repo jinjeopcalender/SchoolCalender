@@ -150,6 +150,11 @@ export default function Home() {
       position: 'center',
     },
     {
+      title: '📅 캘린더',
+      desc: '추가된 일정은 다른 친구와 공유될 수 있어요. 개인적인 일은 개인 일정으로, 수행평가는 공유 일정으로 추가해주세요!',
+      position: 'center',
+    },
+    {
       title: '🔔 알림',
       desc: '선생님이나 관리자가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
       position: 'top',

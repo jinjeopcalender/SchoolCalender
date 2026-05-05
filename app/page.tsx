@@ -1003,7 +1003,7 @@ export default function Home() {
                 <div className="flex flex-wrap items-center gap-1 mt-0.5">
                   {userGrade && <span className="text-xs text-gray-400 dark:text-gray-500">{userGrade}학년</span>}
                   {isAdmin   && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
-                  {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name}</span>}
+                  {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name} 선생님</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 md:w-full">

@@ -395,10 +395,21 @@ export default function Home() {
   const submitReply = async () => {
     if (!replyTarget || !replyContent.trim()) { alert('답장 내용을 입력해주세요!'); return }
     const { error } = await supabase.from('messages')
-      .update({ reply: replyContent.trim() }).eq('id', replyTarget.id)
+      .update({ reply: replyContent.trim(), reply_read: false }).eq('id', replyTarget.id)
     if (error) { alert(error.message); return }
-    setMyMessages(prev => prev.map(m => m.id === replyTarget.id ? { ...m, reply: replyContent.trim() } : m))
+    setMyMessages(prev => prev.map(m => m.id === replyTarget.id ? { ...m, reply: replyContent.trim(), reply_read: false } : m))
     setShowReplyForm(false); setReplyContent(''); setReplyTarget(null)
+  }
+
+  // 보낸 메시지함 열 때 답장 읽음 처리
+  const openSentMessages = async () => {
+    setShowSentMessages(true)
+    const unread = sentMessages.filter(m => m.reply && !m.reply_read)
+    if (unread.length === 0) return
+    await Promise.all(unread.map(m =>
+      supabase.from('messages').update({ reply_read: true }).eq('id', m.id)
+    ))
+    setSentMessages(prev => prev.map(m => m.reply && !m.reply_read ? { ...m, reply_read: true } : m))
   }
 
   // ── 기타 함수들 ───────────────────────────────────────────────
@@ -654,18 +665,23 @@ export default function Home() {
                   <button onClick={() => setShowMsgInbox(true)}
                     className="btn relative px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm md:flex-1 md:text-center">
                     💬<span className="hidden md:inline ml-1 text-xs">수신함</span>
-                    {myMessages.length > 0 && (
+                    {myMessages.filter(m => !m.reply).length > 0 && (
                       <span className="badge-pulse absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                        {myMessages.length}
+                        {myMessages.filter(m => !m.reply).length}
                       </span>
                     )}
                   </button>
                 )}
                 {/* 학생 + 관리자: 보낸 메시지 버튼 */}
                 {!isTeacher && (
-                  <button onClick={() => setShowSentMessages(true)}
+                  <button onClick={openSentMessages}
                     className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center">
                     💬<span className="hidden md:inline ml-1 text-xs">메시지</span>
+                    {sentMessages.filter(m => m.reply && !m.reply_read).length > 0 && (
+                      <span className="badge-pulse absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                        {sentMessages.filter(m => m.reply && !m.reply_read).length}
+                      </span>
+                    )}
                   </button>
                 )}
                 <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">로그아웃</button>

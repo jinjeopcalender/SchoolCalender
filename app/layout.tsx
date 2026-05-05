@@ -13,9 +13,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "클래스톡!",
+  title: "클래스톡",
+  description: "선생님과의 소통 및 학교 일정 관리",
+  manifest: "/manifest.json",
   icons: {
-    icon: '/favicon.png',
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
+  other: {
+    google: "notranslate",
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "클래스톡",
+    "theme-color": "#3b82f6",
   },
 };
 

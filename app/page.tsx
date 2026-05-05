@@ -89,6 +89,28 @@ export default function Home() {
   const [pickerDateType,    setPickerDateType]    = useState<'single'|'range'>('single')
   const pendingEndDateRef = useRef<string | null>(null)
 
+  // PWA 설치
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+      setShowInstallBanner(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setShowInstallBanner(false)
+    setInstallPrompt(null)
+  }
+
   // 토스트
   const [toast, setToast] = useState<{msg: string; type: 'success'|'error'|'info'} | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -856,6 +878,30 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {ToastUI}
+
+      {/* PWA 설치 배너 */}
+      {showInstallBanner && (
+        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[90] px-4 flex justify-center animate-slide-up">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 flex items-center gap-3 w-full max-w-sm">
+            <img src="/favicon.png" alt="icon" className="w-12 h-12 rounded-xl shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">클래스톡 설치</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">홈 화면에 추가해서 앱처럼 사용해요</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => setShowInstallBanner(false)}
+                className="text-xs text-gray-400 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                나중에
+              </button>
+              <button onClick={handleInstall}
+                className="btn text-xs px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium shadow-sm">
+                설치
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!user ? (
         <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
           {/* 헤더 */}

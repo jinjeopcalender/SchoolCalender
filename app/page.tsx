@@ -305,8 +305,8 @@ export default function Home() {
         .subscribe()
     }
 
-    // 학생: 본인이 보낸 메시지(답장 포함) 로드
-    if (!admin && !teacher) {
+    // 학생 + 관리자: 본인이 보낸 메시지(답장 포함) 로드
+    if (!teacher) {
       const { data } = await supabase.from('messages')
         .select('*, teachers(name,subject)')
         .eq('sender_id', uid)
@@ -661,14 +661,11 @@ export default function Home() {
                     )}
                   </button>
                 )}
-                {/* 학생: 보낸 메시지 버튼 */}
-                {!isAdmin && !isTeacher && (
+                {/* 학생 + 관리자: 보낸 메시지 버튼 */}
+                {!isTeacher && (
                   <button onClick={() => setShowSentMessages(true)}
                     className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center">
                     💬<span className="hidden md:inline ml-1 text-xs">메시지</span>
-                    {sentMessages.some(m => m.reply && !m.reply_read) && (
-                      <span className="badge-pulse absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-2 h-2 rounded-full" />
-                    )}
                   </button>
                 )}
                 <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">로그아웃</button>

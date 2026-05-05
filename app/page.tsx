@@ -2080,15 +2080,16 @@ export default function Home() {
             {showAddForm ? (
               <>
                 {/* 개인 일정 토글 */}
-                <div className="flex items-center justify-between mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-                  <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
+                  <div className="flex-1">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">🔒 개인 일정</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">나만 볼 수 있어요</p>
                   </div>
-                  <button onClick={() => setPopupIsPersonal(p => !p)}
-                    className={`shrink-0 ml-3 w-12 h-6 rounded-full transition-colors relative ${popupIsPersonal ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${popupIsPersonal ? 'translate-x-7' : 'translate-x-1'}`} />
-                  </button>
+                  <div
+                    onClick={() => setPopupIsPersonal(p => !p)}
+                    className={`shrink-0 w-11 h-6 rounded-full transition-colors cursor-pointer relative ${popupIsPersonal ? 'bg-yellow-400' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${popupIsPersonal ? 'left-6' : 'left-1'}`} />
+                  </div>
                 </div>
 
                 {popupIsPersonal ? (

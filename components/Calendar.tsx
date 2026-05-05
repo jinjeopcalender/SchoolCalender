@@ -19,6 +19,10 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
 
+  // 툴팁
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; event: any } | null>(null)
+  const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const goToMonth = (year: number, month: number) => {
     const api = calendarRef.current?.getApi()
     if (!api) return
@@ -48,6 +52,13 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
 
   const today = new Date()
 
+  const CATEGORY_COLORS: Record<string, string> = {
+    '수행평가': 'bg-blue-100 text-blue-700',
+    '학교행사': 'bg-green-100 text-green-700',
+    '휴일':     'bg-red-100 text-red-600',
+    '기타':     'bg-purple-100 text-purple-700',
+  }
+
   return (
     <div className={`mt-4 w-full overflow-hidden rounded-2xl ${pendingPostId ? 'ring-2 ring-blue-400' : ''}`}>
       {pendingPostId && (
@@ -74,10 +85,9 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
           ›
         </button>
 
-        {/* 드롭다운 피커 */}
+        {/* 월/년 피커 드롭다운 */}
         {showPicker && (
           <div className="absolute top-12 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-72 animate-pop-in">
-            {/* 연도 선택 */}
             <div className="flex items-center justify-between mb-3">
               <button onClick={() => setCurrentYear(y => y - 1)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 text-lg font-bold">‹</button>
@@ -85,8 +95,6 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
               <button onClick={() => setCurrentYear(y => y + 1)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 text-lg font-bold">›</button>
             </div>
-
-            {/* 월 선택 그리드 */}
             <div className="grid grid-cols-4 gap-1.5">
               {MONTHS.map((m, i) => {
                 const isToday = i === today.getMonth() && currentYear === today.getFullYear()
@@ -104,8 +112,6 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
                 )
               })}
             </div>
-
-            {/* 오늘로 이동 */}
             <button onClick={() => goToMonth(today.getFullYear(), today.getMonth())}
               className="w-full mt-3 py-2 text-xs text-blue-500 border border-blue-200 dark:border-blue-800 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
               오늘로 이동
@@ -148,15 +154,58 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         }
       `}</style>
 
+      {/* 이벤트 툴팁 */}
+      {tooltip && (
+        <div
+          className="fixed z-[300] pointer-events-none animate-fade-in"
+          style={{
+            left: Math.min(tooltip.x + 12, window.innerWidth - 220),
+            top: tooltip.y - 8,
+            transform: 'translateY(-100%)',
+          }}
+        >
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-52">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[tooltip.event.extendedProps?.category] ?? 'bg-gray-100 text-gray-600'}`}>
+                {tooltip.event.extendedProps?.category}
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tooltip.event.title}</p>
+            {tooltip.event.extendedProps?.content && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{tooltip.event.extendedProps.content}</p>
+            )}
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {tooltip.event.startStr.split('T')[0]}
+              {tooltip.event.end && ` ~ ${new Date(new Date(tooltip.event.end).setDate(new Date(tooltip.event.end).getDate()-1)).toISOString().split('T')[0]}`}
+            </p>
+          </div>
+        </div>
+      )}
+
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
-        events={events}
-        dateClick={(info) => onDateClick(info.dateStr)}
+        events={events.map(e => ({
+          ...e,
+          extendedProps: { category: e.category, content: e.content },
+        }))}
+        dateClick={(info) => { setTooltip(null); onDateClick(info.dateStr) }}
         eventClick={(info) => {
+          setTooltip(null)
           const dateStr = info.event.startStr.split('T')[0]
           onDateClick(dateStr)
+        }}
+        eventMouseEnter={(info) => {
+          if (tooltipTimer.current) clearTimeout(tooltipTimer.current)
+          tooltipTimer.current = setTimeout(() => {
+            const rect = info.el.getBoundingClientRect()
+            setTooltip({ x: rect.left, y: rect.top, event: info.event })
+          }, 300)
+        }}
+        eventMouseLeave={() => {
+          if (tooltipTimer.current) clearTimeout(tooltipTimer.current)
+          tooltipTimer.current = setTimeout(() => setTooltip(null), 200)
         }}
         headerToolbar={false}
         dayHeaderFormat={{ weekday: 'narrow' }}

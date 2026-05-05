@@ -31,6 +31,9 @@ export default function Home() {
   const [myTeacherRow,     setMyTeacherRow]     = useState<any>(null) // teachers 테이블 본인 row
   const [showGradePicker,  setShowGradePicker]  = useState(false)
   const [showTeacherPicker,setShowTeacherPicker]= useState(false)
+  const [showTeacherAuth,  setShowTeacherAuth]  = useState(false) // 학년 선택 화면에서 선생님 선택 시 비밀번호 입력
+  const [teacherAuthPw,    setTeacherAuthPw]    = useState('')
+  const [teacherAuthError, setTeacherAuthError] = useState('')
 
   // 캘린더
   const [events,        setEvents]        = useState<any[]>([])
@@ -369,6 +372,25 @@ export default function Home() {
     await loadCalendarData(user.id, grade, isAdmin)
   }
 
+  const confirmTeacherAuth = async () => {
+    if (!user || !teacherAuthPw.trim()) return
+    const { data } = await supabase.from('settings').select('value').eq('key', 'teacher_password').single()
+    if (!data || data.value !== teacherAuthPw.trim()) {
+      setTeacherAuthError('비밀번호가 맞지 않아요')
+      return
+    }
+    // 비밀번호 맞으면 role을 teacher로 업데이트, grade는 null
+    const { error } = await supabase.from('users').update({ role: 'teacher', grade: null }).eq('id', user.id)
+    if (error) { alert(error.message); return }
+    setIsTeacher(true)
+    setShowGradePicker(false)
+    setShowTeacherAuth(false)
+    setTeacherAuthPw('')
+    setTeacherAuthError('')
+    // 선생님 본인 선택 화면으로
+    setShowTeacherPicker(true)
+  }
+
   const login  = async () => supabase.auth.signInWithOAuth({ provider:'google', options:{ skipBrowserRedirect:false, queryParams:{ prompt:'select_account' } } })
   const logout = async () => { supabase.removeAllChannels(); await supabase.auth.signOut(); setUser(null); setUserGrade(null) }
 
@@ -479,8 +501,8 @@ export default function Home() {
   if (user && isTeacher && showTeacherPicker) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-4 py-10 max-w-lg mx-auto">
-        <h1 className="text-xl font-bold mb-1">👩‍🏫 선생님 인증</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">목록에서 본인 선생님을 선택해주세요</p>
+        <h1 className="text-xl font-bold mb-1">👩‍🏫 본인 확인</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">목록에서 본인이 누구인지 선택해주세요</p>
         {teachers.length === 0
           ? <p className="text-sm text-gray-400 text-center mt-16">등록된 선생님이 없어요.<br/>관리자에게 문의해주세요.</p>
           : <div className="flex flex-col gap-2">
@@ -513,7 +535,40 @@ export default function Home() {
               {g}학년
             </button>
           ))}
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <span className="text-xs text-gray-400 dark:text-gray-500">또는</span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          </div>
+          <button onClick={() => { setShowTeacherAuth(true); setTeacherAuthPw(''); setTeacherAuthError('') }}
+            className="btn py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-lg font-bold shadow-md shadow-emerald-200 dark:shadow-emerald-900/30">
+            👩‍🏫 선생님
+          </button>
         </div>
+
+        {/* 비밀번호 입력 모달 */}
+        {showTeacherAuth && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in px-6">
+            <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-2xl p-6 w-full max-w-xs animate-pop-in">
+              <h3 className="font-bold text-base mb-1">👩‍🏫 선생님 인증</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">공동 비밀번호를 입력해주세요</p>
+              <input
+                type="password"
+                placeholder="비밀번호"
+                value={teacherAuthPw}
+                onChange={e => { setTeacherAuthPw(e.target.value); setTeacherAuthError('') }}
+                onKeyDown={e => e.key === 'Enter' && confirmTeacherAuth()}
+                className={`${INPUT} mb-2`}
+              />
+              {teacherAuthError && <p className="text-xs text-red-500 mb-2">{teacherAuthError}</p>}
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => { setShowTeacherAuth(false); setTeacherAuthPw(''); setTeacherAuthError('') }}
+                  className={BTN_GRAY}>취소</button>
+                <button onClick={confirmTeacherAuth} className={BTN_BLUE}>확인</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -753,11 +808,9 @@ export default function Home() {
             <h3 className="font-bold text-base mb-1">💬 메시지 보내기</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{msgTarget.name} 선생님 ({msgTarget.subject})</p>
             <div className="flex items-start gap-2 p-2.5 bg-orange-50 dark:bg-orange-900/20 rounded-xl mb-4">
-              <span className="text-sm">⚠️</span>
+              <span className="text-sm">💬</span>
               <p className="text-xs text-orange-600 dark:text-orange-400">
-                {isAdmin
-                  ? '관리자 메시지는 선생님께 바로 전달돼요.'
-                  : '메시지는 관리자 검토 후 선생님께 전달돼요. 욕설이나 부적절한 내용은 차단될 수 있어요.'}
+                욕설, 비하·비방하는 말은 사용하지 말아주세요
               </p>
             </div>
             <textarea placeholder="선생님께 전할 내용을 입력해주세요" value={msgContent}

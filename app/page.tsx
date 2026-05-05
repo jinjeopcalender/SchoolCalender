@@ -86,6 +86,11 @@ export default function Home() {
   const [pendingMessages, setPendingMessages] = useState<any[]>([]) // 관리자 승인 대기
   const [myMessages,      setMyMessages]      = useState<any[]>([]) // 선생님 수신함
   const [showMsgInbox,    setShowMsgInbox]    = useState(false)
+  const [sentMessages,    setSentMessages]    = useState<any[]>([]) // 학생 보낸 메시지함
+  const [showSentMessages,setShowSentMessages]= useState(false)
+  const [replyTarget,     setReplyTarget]     = useState<any>(null) // 답장할 메시지
+  const [replyContent,    setReplyContent]    = useState('')
+  const [showReplyForm,   setShowReplyForm]   = useState(false)
 
   const toggleSubject = (s: string) =>
     setOpenSubjects(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n })
@@ -95,6 +100,8 @@ export default function Home() {
 
   useEffect(() => {
     const handle = () => {
+      if (showReplyForm)       { setShowReplyForm(false); setReplyContent(''); return }
+      if (showSentMessages)    { setShowSentMessages(false); return }
       if (showMsgInbox)        { setShowMsgInbox(false); return }
       if (showMsgForm)         { setShowMsgForm(false); setMsgContent(''); return }
       if (showTeacherPicker)   { setShowTeacherPicker(false); return }
@@ -107,7 +114,7 @@ export default function Home() {
     }
     window.addEventListener('popstate', handle)
     return () => window.removeEventListener('popstate', handle)
-  }, [showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
+  }, [showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
       showSchoolEventForm, showDatePicker, showAddForm, showDatePopup, showNotifications])
 
   useEffect(() => { if (showNotifications)   pushHistory() }, [showNotifications])
@@ -119,6 +126,8 @@ export default function Home() {
   useEffect(() => { if (showTeacherPicker)    pushHistory() }, [showTeacherPicker])
   useEffect(() => { if (showMsgForm)          pushHistory() }, [showMsgForm])
   useEffect(() => { if (showMsgInbox)         pushHistory() }, [showMsgInbox])
+  useEffect(() => { if (showSentMessages)     pushHistory() }, [showSentMessages])
+  useEffect(() => { if (showReplyForm)        pushHistory() }, [showReplyForm])
   // ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -295,6 +304,28 @@ export default function Home() {
           })
         .subscribe()
     }
+
+    // 학생: 본인이 보낸 메시지(답장 포함) 로드
+    if (!admin && !teacher) {
+      const { data } = await supabase.from('messages')
+        .select('*, teachers(name,subject)')
+        .eq('sender_id', uid)
+        .in('status', ['approved','pending','rejected'])
+        .order('created_at', { ascending: false })
+      setSentMessages(data || [])
+
+      // 답장 왔을 때 Realtime 업데이트
+      supabase.channel('messages-sent-channel')
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
+          async (payload) => {
+            if (payload.new.sender_id === uid) {
+              const { data: m } = await supabase.from('messages')
+                .select('*, teachers(name,subject)').eq('id', payload.new.id).single()
+              if (m) setSentMessages(prev => prev.map(x => x.id === m.id ? m : x))
+            }
+          })
+        .subscribe()
+    }
   }
 
   // ── 선생님 본인 선택 ───────────────────────────────────────────
@@ -357,6 +388,17 @@ export default function Home() {
   const rejectMessage = async (id: string) => {
     await supabase.from('messages').update({ status: 'rejected' }).eq('id', id)
     setPendingMessages(prev => prev.filter(m => m.id !== id))
+  }
+
+  const openReplyForm = (m: any) => { setReplyTarget(m); setReplyContent(''); setShowReplyForm(true) }
+
+  const submitReply = async () => {
+    if (!replyTarget || !replyContent.trim()) { alert('답장 내용을 입력해주세요!'); return }
+    const { error } = await supabase.from('messages')
+      .update({ reply: replyContent.trim() }).eq('id', replyTarget.id)
+    if (error) { alert(error.message); return }
+    setMyMessages(prev => prev.map(m => m.id === replyTarget.id ? { ...m, reply: replyContent.trim() } : m))
+    setShowReplyForm(false); setReplyContent(''); setReplyTarget(null)
   }
 
   // ── 기타 함수들 ───────────────────────────────────────────────
@@ -619,6 +661,16 @@ export default function Home() {
                     )}
                   </button>
                 )}
+                {/* 학생: 보낸 메시지 버튼 */}
+                {!isAdmin && !isTeacher && (
+                  <button onClick={() => setShowSentMessages(true)}
+                    className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center">
+                    💬<span className="hidden md:inline ml-1 text-xs">메시지</span>
+                    {sentMessages.some(m => m.reply && !m.reply_read) && (
+                      <span className="badge-pulse absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-2 h-2 rounded-full" />
+                    )}
+                  </button>
+                )}
                 <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">로그아웃</button>
               </div>
             </div>
@@ -756,8 +808,8 @@ export default function Home() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
                                       </div>
                                       <div className="flex gap-2 shrink-0">
-                                        {/* 관리자가 아닌 본인 선생님 row가 아닌 경우 메시지 가능 */}
-                                        {!(isTeacher && myTeacherRow?.id === t.id) && (
+                                        {/* 인증된 선생님에게만 메시지 가능, 본인 제외 */}
+                                        {t.user_id && !(isTeacher && myTeacherRow?.id === t.id) && (
                                           <button onClick={() => openMsgForm(t)}
                                             className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
                                             💬 메시지
@@ -836,12 +888,80 @@ export default function Home() {
                       <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
                         {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR')}
                       </p>
-                      <p className="text-sm">{m.content}</p>
+                      <p className="text-sm mb-2">{m.content}</p>
+                      {m.reply
+                        ? <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 text-xs text-emerald-700 dark:text-emerald-400">
+                            ↩ 답장 완료: {m.reply}
+                          </div>
+                        : <button onClick={() => openReplyForm(m)}
+                            className="btn text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                            ↩ 답장하기
+                          </button>
+                      }
                     </div>
                   ))}
                 </div>
             }
             <button onClick={()=>setShowMsgInbox(false)}
+              className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
+          </div>
+        </div>
+      )}
+
+      {/* 답장 폼 */}
+      {showReplyForm && replyTarget && (
+        <div className={overlayClass}>
+          <div className={sheetClass}>
+            <h3 className="font-bold text-base mb-1">↩ 답장하기</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{replyTarget.senderName}에게</p>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">원본 메시지</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{replyTarget.content}</p>
+            </div>
+            <textarea placeholder="답장 내용을 입력해주세요" value={replyContent}
+              onChange={e=>setReplyContent(e.target.value)} className={`${INPUT} mb-4`} rows={4} />
+            <div className="flex gap-2">
+              <button onClick={()=>{setShowReplyForm(false);setReplyContent('')}} className={BTN_GRAY}>취소</button>
+              <button onClick={submitReply} className={BTN_BLUE}>전송</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학생 보낸 메시지함 */}
+      {showSentMessages && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
+            <h3 className="font-bold text-base mb-4">💬 보낸 메시지</h3>
+            {sentMessages.length === 0
+              ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">보낸 메시지가 없어요</p>
+              : <div className="flex flex-col gap-3">
+                  {sentMessages.map(m => (
+                    <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {m.teachers?.name} 선생님 ({m.teachers?.subject}) · {new Date(m.created_at).toLocaleDateString('ko-KR')}
+                        </p>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                          m.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                          m.status === 'rejected' ? 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400' :
+                          'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {m.status === 'approved' ? '전달됨' : m.status === 'rejected' ? '거절됨' : '검토중'}
+                        </span>
+                      </div>
+                      <p className="text-sm">{m.content}</p>
+                      {m.reply && (
+                        <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+                          <p className="text-xs text-blue-400 dark:text-blue-500 mb-0.5">↩ 선생님 답장</p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">{m.reply}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+            }
+            <button onClick={()=>setShowSentMessages(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
         </div>

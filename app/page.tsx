@@ -148,12 +148,12 @@ export default function Home() {
     },
     {
       title: '🔔 알림',
-      desc: '선생님이나 관리자가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
+      desc: '선생님, 관리자, 또는 다른 친구가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 거부할 수 있어요.',
       position: 'top',
     },
     {
       title: '💬 메시지',
-      desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 관리자 검토 후 전달돼요.',
+      desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 로그인한 선생님에게만 보낼 수 있어요. ',
       position: 'top',
     },
     {
@@ -414,7 +414,10 @@ export default function Home() {
     // Realtime - teachers 변경
     supabase.channel('teachers-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'teachers' },
-        (payload) => setTeachers(prev => [...prev, payload.new as any].sort((a,b) => a.subject.localeCompare(b.subject) || a.name.localeCompare(b.name))))
+        (payload) => setTeachers(prev => {
+          if (prev.some(t => t.id === payload.new.id)) return prev
+          return [...prev, payload.new as any].sort((a,b) => a.subject.localeCompare(b.subject) || a.name.localeCompare(b.name))
+        }))
       .on('postgres_changes', { event:'UPDATE', schema:'public', table:'teachers' },
         (payload) => setTeachers(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t)))
       .on('postgres_changes', { event:'DELETE', schema:'public', table:'teachers' },

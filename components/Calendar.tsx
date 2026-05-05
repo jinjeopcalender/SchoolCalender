@@ -52,6 +52,16 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
           font-size: 0.7rem;
           padding: 4px 2px !important;
         }
+        /* 일요일 빨간색 */
+        .fc .fc-day-sun .fc-daygrid-day-number,
+        .fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion {
+          color: #ef4444 !important;
+        }
+        /* 토요일 파란색 */
+        .fc .fc-day-sat .fc-daygrid-day-number,
+        .fc .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion {
+          color: #3b82f6 !important;
+        }
         @media (max-width: 480px) {
           .fc .fc-toolbar { justify-content: space-between; }
           .fc .fc-daygrid-day { min-height: 36px !important; }
@@ -63,7 +73,6 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         events={events}
         dateClick={(info) => onDateClick(info.dateStr)}
         eventClick={(info) => {
-          // 이벤트 클릭 시 해당 날짜의 팝업 열기
           const dateStr = info.event.startStr.split('T')[0]
           onDateClick(dateStr)
         }}

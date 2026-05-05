@@ -10,6 +10,7 @@ type Category = '수행평가' | '기타'
 const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
   '수행평가': { badge: 'bg-blue-100 text-blue-700', color: '#3b82f6' },
   '학교행사': { badge: 'bg-green-100 text-green-700', color: '#10b981' },
+  '쉬는날':   { badge: 'bg-red-100 text-red-600',   color: '#ef4444' },
   '기타':     { badge: 'bg-purple-100 text-purple-700', color: '#8b5cf6' },
 }
 const getCategoryBadge = (cat: string) => CATEGORY_STYLES[cat]?.badge ?? 'bg-gray-100 text-gray-600'
@@ -56,6 +57,7 @@ export default function Home() {
   const [schoolEventContent,  setSchoolEventContent]  = useState('')
   const [schoolEventDate,     setSchoolEventDate]     = useState('')
   const [schoolEventGrade,    setSchoolEventGrade]    = useState<number | null>(null)
+  const [schoolEventType,     setSchoolEventType]     = useState<'학교행사'|'쉬는날'>('학교행사')
 
   // 알림
   const [notifications,    setNotifications]    = useState<any[]>([])
@@ -494,7 +496,7 @@ export default function Home() {
 
   const submitPost = async () => {
     if (!user || !selectedDate || !popupTitle) { alert('제목을 입력해주세요!'); return }
-    const targetGrade = isAdmin ? popupGrade : userGrade
+    const targetGrade = (isAdmin || isTeacher) ? popupGrade : userGrade
     if (!targetGrade) { alert('학년을 선택해주세요!'); return }
     const { data: postData, error } = await supabase.from('posts').insert({
       title:popupTitle, content:popupContent, status:'pending', created_by:user.id,
@@ -511,7 +513,7 @@ export default function Home() {
     if (!user || !schoolEventTitle || !schoolEventDate) { alert('제목과 날짜를 입력해주세요!'); return }
     const { data: postData, error } = await supabase.from('posts').insert({
       title:schoolEventTitle, content:schoolEventContent, status:'approved', created_by:user.id,
-      default_date:schoolEventDate, category:'학교행사', grade:schoolEventGrade, is_user_generated:false,
+      default_date:schoolEventDate, category:schoolEventType, grade:schoolEventGrade, is_user_generated:false,
     }).select().single()
     if (error) { alert(error.message); return }
     let q = supabase.from('users').select('id')
@@ -519,9 +521,9 @@ export default function Home() {
     const { data: targetUsers } = await q
     if (targetUsers?.length)
       await supabase.from('user_calendar').insert(targetUsers.map(u=>({ user_id:u.id, post_id:postData.id, assigned_date:schoolEventDate })))
-    setShowSchoolEventForm(false); setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventGrade(null)
-    setEvents(prev=>[...prev,{ id:postData.id, title:schoolEventTitle, content:schoolEventContent, category:'학교행사', date:schoolEventDate, color:getCategoryColor('학교행사') }])
-    alert('학교 행사가 추가됐어요!')
+    setShowSchoolEventForm(false); setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventGrade(null); setSchoolEventType('학교행사')
+    setEvents(prev=>[...prev,{ id:postData.id, title:schoolEventTitle, content:schoolEventContent, category:schoolEventType, date:schoolEventDate, color:getCategoryColor(schoolEventType) }])
+    alert('학교 일정이 추가됐어요!')
   }
 
   const deleteEvent = async (eventId: string) => {
@@ -686,7 +688,7 @@ export default function Home() {
               <div className="flex items-center gap-2 md:w-full">
                 {/* 알림 버튼 - badgeCount는 active만 */}
                 <button onClick={() => setShowNotifications(true)}
-                  className="btn relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">
+                  className="btn relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
                   🔔<span className="hidden md:inline ml-1 text-xs">알림</span>
                   {badgeCount > 0 && (
                     <span className="badge-pulse absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
@@ -697,7 +699,7 @@ export default function Home() {
                 {/* 선생님 수신함 버튼 */}
                 {isTeacher && (
                   <button onClick={() => setShowMsgInbox(true)}
-                    className="btn relative px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm md:flex-1 md:text-center">
+                    className="btn relative px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
                     💬<span className="hidden md:inline ml-1 text-xs">수신함</span>
                     {myMessages.filter(m => !m.reply).length > 0 && (
                       <span className="badge-pulse absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
@@ -709,7 +711,7 @@ export default function Home() {
                 {/* 학생 + 관리자: 보낸 메시지 버튼 */}
                 {!isTeacher && (
                   <button onClick={openSentMessages}
-                    className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center">
+                    className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
                     💬<span className="hidden md:inline ml-1 text-xs">메시지</span>
                     {sentMessages.filter(m => m.reply && !m.reply_read).length > 0 && (
                       <span className="badge-pulse absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
@@ -718,7 +720,7 @@ export default function Home() {
                     )}
                   </button>
                 )}
-                <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center">로그아웃</button>
+                <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">로그아웃</button>
               </div>
             </div>
 
@@ -741,13 +743,13 @@ export default function Home() {
               {/* 캘린더 탭 */}
               {activeTab === 'calendar' && (
                 <div className="px-3 py-4 md:px-6 md:py-6">
-                  {isAdmin && (
+                  {(isAdmin || isTeacher) && (
                     <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900">
                       <div className="flex items-center justify-between mb-3">
                         <h2 className="text-base font-bold">🛠 관리자</h2>
                         <button onClick={() => setShowSchoolEventForm(true)}
                           className="btn px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium shadow-sm">
-                          + 학교 행사
+                          + 학교 일정
                         </button>
                       </div>
 
@@ -1084,12 +1086,23 @@ export default function Home() {
         </div>
       )}
 
-      {/* 학교행사 추가 */}
+      {/* 학교 일정 추가 */}
       {showSchoolEventForm && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[80vh] overflow-y-auto`}>
-            <h3 className="font-bold text-base mb-4">🏫 학교 행사 추가</h3>
-            <input placeholder="행사 제목" value={schoolEventTitle} onChange={e=>setSchoolEventTitle(e.target.value)} className={`${INPUT} mb-2`} />
+            <h3 className="font-bold text-base mb-4">📅 학교 일정 추가</h3>
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종류</p>
+              <div className="flex gap-2">
+                {([{label:'🏫 학교행사', val:'학교행사'},{label:'🔴 쉬는날', val:'쉬는날'}] as const).map(({label,val})=>(
+                  <button key={val} onClick={()=>setSchoolEventType(val)}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <input placeholder="일정 제목" value={schoolEventTitle} onChange={e=>setSchoolEventTitle(e.target.value)} className={`${INPUT} mb-2`} />
             <textarea placeholder="내용 (선택)" value={schoolEventContent} onChange={e=>setSchoolEventContent(e.target.value)} className={`${INPUT} mb-2`} rows={2} />
             <div className="mb-2">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">날짜</p>
@@ -1236,7 +1249,7 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-                {isAdmin && (
+                {(isAdmin || isTeacher) && (
                   <div className="mb-2">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
                     <div className="flex gap-2">

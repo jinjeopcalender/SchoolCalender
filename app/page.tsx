@@ -234,7 +234,7 @@ export default function Home() {
     }))
 
     const { data: notifData } = await supabase.from('notifications')
-      .select('*, posts(id,title,content,default_date,category)')
+      .select('*, posts(id,title,content,default_date,end_date,category)')
       .eq('user_id', uid).neq('status','dismissed').neq('status','accepted')
     setNotifications(notifData || [])
 
@@ -248,7 +248,7 @@ export default function Home() {
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
         async (payload) => {
           const { data: n } = await supabase.from('notifications')
-            .select('*, posts(id,title,content,default_date,category)').eq('id', payload.new.id).single()
+            .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
           if (n) setNotifications(prev => prev.some(x=>x.id===n.id) ? prev : [n, ...prev])
         })
       .on('postgres_changes', { event:'UPDATE', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
@@ -599,6 +599,7 @@ export default function Home() {
   }
 
   const openEditSchoolEvent = (event: any) => {
+    setShowDatePopup(false)
     setEditingSchoolEvent(event)
     setSchoolEventTitle(event.title)
     setSchoolEventContent(event.content || '')
@@ -635,6 +636,7 @@ export default function Home() {
 
   // 기간 수정 (학생/선생님용)
   const openEditEvent = (event: any) => {
+    setShowDatePopup(false)
     setEditingEvent(event)
     setEditStartDate(event.date)
     setEditEndDate(event.end_date || '')
@@ -1349,7 +1351,7 @@ export default function Home() {
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
                     <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}{notif.posts.end_date ? ` ~ ${notif.posts.end_date}` : ''}</p>
                     <div className="flex flex-col gap-1.5 mt-2">
                       <button onClick={()=>acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
                       <div className="flex gap-1.5">
@@ -1369,7 +1371,7 @@ export default function Home() {
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
                     <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}{notif.posts.end_date ? ` ~ ${notif.posts.end_date}` : ''}</p>
                     <div className="flex flex-col gap-1.5 mt-2">
                       <button onClick={()=>acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
                       <button onClick={()=>dismissNotification(notif)} className="w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
@@ -1463,15 +1465,15 @@ export default function Home() {
                         <div className="flex flex-col gap-1 shrink-0">
                           {isSchoolEvent && isAdmin && (
                             <button onClick={()=>openEditSchoolEvent(event)}
-                              className="text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30">수정</button>
+                              className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">수정</button>
                           )}
                           {!isSchoolEvent && (
                             <button onClick={()=>openEditEvent(event)}
-                              className="text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30">기간수정</button>
+                              className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">기간수정</button>
                           )}
                           {canDelete && (
                             <button onClick={()=>deleteEvent(event.id, isSchoolEvent)}
-                              className="text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30">삭제</button>
+                              className="btn text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">삭제</button>
                           )}
                         </div>
                       </div>

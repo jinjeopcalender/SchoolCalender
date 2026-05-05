@@ -212,17 +212,25 @@ export default function Home() {
       setPendingPosts(pending || [])
     }
 
-    // Realtime - 알림
+    // Realtime - 알림 INSERT + UPDATE
     supabase.channel('notifications-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
         async (payload) => {
           const { data: n } = await supabase.from('notifications')
             .select('*, posts(id,title,content,default_date,category)').eq('id', payload.new.id).single()
-          if (n) setNotifications(prev => [n, ...prev])
+          if (n) setNotifications(prev => prev.some(x=>x.id===n.id) ? prev : [n, ...prev])
+        })
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
+        (payload) => {
+          const s = payload.new.status
+          if (s === 'dismissed' || s === 'accepted')
+            setNotifications(prev => prev.filter(n => n.id !== payload.new.id))
+          else
+            setNotifications(prev => prev.map(n => n.id === payload.new.id ? { ...n, status: s } : n))
         })
       .subscribe()
 
-    // Realtime - 캘린더
+    // Realtime - 캘린더 INSERT
     supabase.channel('user-calendar-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'user_calendar', filter:`user_id=eq.${uid}` },
         async (payload) => {
@@ -233,6 +241,16 @@ export default function Home() {
             date:payload.new.assigned_date, color:getCategoryColor(p.category),
           }])
         })
+      .subscribe()
+
+    // Realtime - teachers 변경
+    supabase.channel('teachers-channel')
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'teachers' },
+        (payload) => setTeachers(prev => [...prev, payload.new as any].sort((a,b) => a.subject.localeCompare(b.subject) || a.name.localeCompare(b.name))))
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'teachers' },
+        (payload) => setTeachers(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t)))
+      .on('postgres_changes', { event:'DELETE', schema:'public', table:'teachers' },
+        (payload) => setTeachers(prev => prev.filter(t => t.id !== (payload.old as any).id)))
       .subscribe()
 
     if (admin) {
@@ -294,14 +312,20 @@ export default function Home() {
       setMyMessages(enriched)
 
       supabase.channel('messages-teacher-channel')
+        // 새 메시지 승인(pending→approved) 또는 답장 읽음 처리 UPDATE
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
           async (payload) => {
-            if (payload.new.teacher_id === myT.id && payload.new.status === 'approved') {
+            if (payload.new.teacher_id !== myT.id) return
+            if (payload.new.status === 'approved') {
               const { data: m } = await supabase.from('messages')
                 .select('*').eq('id', payload.new.id).single()
               if (m) {
                 const { data: s } = await supabase.from('users').select('name').eq('id', m.sender_id).single()
-                setMyMessages(prev => [{ ...m, senderName: s?.name ?? '알 수 없음' }, ...prev.filter(x => x.id !== m.id)])
+                const enriched = { ...m, senderName: s?.name ?? '알 수 없음' }
+                setMyMessages(prev => {
+                  const exists = prev.some(x => x.id === m.id)
+                  return exists ? prev.map(x => x.id === m.id ? enriched : x) : [enriched, ...prev]
+                })
               }
             }
           })
@@ -317,15 +341,22 @@ export default function Home() {
         .order('created_at', { ascending: false })
       setSentMessages(data || [])
 
-      // 답장 왔을 때 Realtime 업데이트
       supabase.channel('messages-sent-channel')
+        // 새 메시지 INSERT
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' },
+          async (payload) => {
+            if (payload.new.sender_id !== uid) return
+            const { data: m } = await supabase.from('messages')
+              .select('*, teachers(name,subject)').eq('id', payload.new.id).single()
+            if (m) setSentMessages(prev => prev.some(x=>x.id===m.id) ? prev : [m, ...prev])
+          })
+        // 상태변경 or 답장 UPDATE
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
           async (payload) => {
-            if (payload.new.sender_id === uid) {
-              const { data: m } = await supabase.from('messages')
-                .select('*, teachers(name,subject)').eq('id', payload.new.id).single()
-              if (m) setSentMessages(prev => prev.map(x => x.id === m.id ? m : x))
-            }
+            if (payload.new.sender_id !== uid) return
+            const { data: m } = await supabase.from('messages')
+              .select('*, teachers(name,subject)').eq('id', payload.new.id).single()
+            if (m) setSentMessages(prev => prev.map(x => x.id === m.id ? m : x))
           })
         .subscribe()
     }

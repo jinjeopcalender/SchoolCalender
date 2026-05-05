@@ -170,7 +170,10 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? 'bg-gray-100 text-gray-600'}`}>
                   {ev.category}
                 </span>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{ev.title}</p>
+                <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{ev.title.replace(/^\[\d학년\] /, '')}</p>
+                  {ev.grade && <span className="text-xs text-gray-400">({ev.grade}학년)</span>}
+                </div>
                 {ev.content && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{ev.content}</p>
                 )}

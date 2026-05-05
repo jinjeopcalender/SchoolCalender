@@ -92,6 +92,7 @@ export default function Home() {
   // PWA 설치
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
+  const [showIOSInstall, setShowIOSInstall] = useState(false)
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -100,6 +101,14 @@ export default function Home() {
       setShowInstallBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
+
+    // iOS 감지 - Safari에서 standalone 모드가 아닌 경우
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const isStandalone = (window.navigator as any).standalone === true
+    if (isIOS && !isStandalone) {
+      setTimeout(() => setShowIOSInstall(true), 1500)
+    }
+
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -110,6 +119,43 @@ export default function Home() {
     if (outcome === 'accepted') setShowInstallBanner(false)
     setInstallPrompt(null)
   }
+
+  // 튜토리얼
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [tutorialStep, setTutorialStep] = useState(0)
+
+  const tutorialSteps = [
+    {
+      title: '📅 캘린더',
+      desc: '날짜를 탭하면 그날의 일정을 확인하고 새 일정을 추가할 수 있어요.',
+      position: 'center',
+    },
+    {
+      title: '🔔 알림',
+      desc: '선생님이나 관리자가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
+      position: 'top',
+    },
+    {
+      title: '💬 메시지',
+      desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 관리자 검토 후 전달돼요.',
+      position: 'top',
+    },
+    {
+      title: '🏫 선생님 위치',
+      desc: '아래 탭에서 선생님 위치를 확인할 수 있어요. 과목별로 정리되어 있어요.',
+      position: 'bottom',
+    },
+    {
+      title: '➕ 일정 추가',
+      desc: '캘린더에서 날짜를 탭하고 "+ 일정 추가"를 누르면 수행평가나 기타 일정을 등록할 수 있어요. 하루 또는 기간으로 설정 가능해요.',
+      position: 'center',
+    },
+    {
+      title: '✅ 준비 완료!',
+      desc: '이제 클래스톡을 자유롭게 사용해보세요. 우측 하단 ? 버튼을 눌러 언제든 다시 볼 수 있어요.',
+      position: 'center',
+    },
+  ]
 
   // 토스트
   const [toast, setToast] = useState<{msg: string; type: 'success'|'error'|'info'} | null>(null)
@@ -217,6 +263,12 @@ export default function Home() {
 
       await supabase.from('users').upsert({ id: cu.id, name: cu.user_metadata.full_name })
       const { data: ud } = await supabase.from('users').select('role, grade').eq('id', cu.id).single()
+
+      // 첫 로그인 튜토리얼
+      const tutorialKey = `tutorial_done_${cu.id}`
+      if (!localStorage.getItem(tutorialKey)) {
+        setTimeout(() => { setShowTutorial(true); setTutorialStep(0) }, 800)
+      }
 
       const admin   = ud?.role === 'admin'
       const teacher = ud?.role === 'teacher'
@@ -879,7 +931,81 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {ToastUI}
 
-      {/* PWA 설치 배너 */}
+      {/* 튜토리얼 오버레이 */}
+      {showTutorial && user && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative mx-4 w-full max-w-sm animate-pop-in">
+            {/* 단계 표시 */}
+            <div className="flex justify-center gap-1.5 mb-4">
+              {tutorialSteps.map((_, i) => (
+                <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === tutorialStep ? 'w-6 bg-blue-400' : i < tutorialStep ? 'w-1.5 bg-blue-300' : 'w-1.5 bg-white/30'}`} />
+              ))}
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl">
+              <p className="text-2xl mb-2">{tutorialSteps[tutorialStep].title.split(' ')[0]}</p>
+              <h3 className="text-lg font-bold mb-2">{tutorialSteps[tutorialStep].title.split(' ').slice(1).join(' ')}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{tutorialSteps[tutorialStep].desc}</p>
+
+              <div className="flex gap-2 mt-6">
+                {tutorialStep > 0 && (
+                  <button onClick={() => setTutorialStep(s => s-1)}
+                    className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">
+                    이전
+                  </button>
+                )}
+                <button onClick={() => {
+                  if (tutorialStep < tutorialSteps.length - 1) {
+                    setTutorialStep(s => s+1)
+                  } else {
+                    setShowTutorial(false)
+                    localStorage.setItem(`tutorial_done_${user.id}`, '1')
+                  }
+                }} className="btn flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium shadow-md shadow-blue-200 dark:shadow-blue-900/30">
+                  {tutorialStep < tutorialSteps.length - 1 ? '다음 →' : '시작하기 🎉'}
+                </button>
+              </div>
+
+              {tutorialStep < tutorialSteps.length - 1 && (
+                <button onClick={() => {
+                  setShowTutorial(false)
+                  localStorage.setItem(`tutorial_done_${user.id}`, '1')
+                }} className="w-full mt-2 text-xs text-gray-400 dark:text-gray-500 text-center py-1">
+                  건너뛰기
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* iOS 설치 안내 */}
+      {showIOSInstall && (
+        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[90] px-4 flex justify-center animate-slide-up">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-full max-w-sm">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <img src="/favicon.png" alt="icon" className="w-10 h-10 rounded-xl" />
+                <div>
+                  <p className="text-sm font-bold">클래스톡 설치</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">홈 화면에 추가하기</p>
+                </div>
+              </div>
+              <button onClick={() => setShowIOSInstall(false)} className="text-gray-400 text-lg leading-none">×</button>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+              아래 <span className="font-bold text-blue-500">공유 버튼 □↑</span>을 탭한 후<br/>
+              <span className="font-bold">"홈 화면에 추가"</span>를 선택해주세요
+            </div>
+            {/* iOS 화살표 */}
+            <div className="flex justify-center mt-2">
+              <p className="text-2xl animate-bounce">↓</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PWA 설치 배너 (Android/Chrome) */}
       {showInstallBanner && (
         <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[90] px-4 flex justify-center animate-slide-up">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 flex items-center gap-3 w-full max-w-sm">
@@ -900,6 +1026,14 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ? 도움말 버튼 (로그인 후에만) */}
+      {user && !showTutorial && (
+        <button onClick={() => { setTutorialStep(0); setShowTutorial(true) }}
+          className="fixed right-4 bottom-20 md:bottom-8 z-[80] w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-lg font-bold btn">
+          ?
+        </button>
       )}
 
       {!user ? (

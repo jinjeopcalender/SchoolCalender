@@ -10,7 +10,7 @@ type Category = '수행평가' | '기타'
 const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
   '수행평가': { badge: 'bg-blue-100 text-blue-700', color: '#3b82f6' },
   '학교행사': { badge: 'bg-green-100 text-green-700', color: '#10b981' },
-  '쉬는날':   { badge: 'bg-red-100 text-red-600',   color: '#ef4444' },
+  '휴일':   { badge: 'bg-red-100 text-red-600',   color: '#ef4444' },
   '기타':     { badge: 'bg-purple-100 text-purple-700', color: '#8b5cf6' },
 }
 const getCategoryBadge = (cat: string) => CATEGORY_STYLES[cat]?.badge ?? 'bg-gray-100 text-gray-600'
@@ -53,17 +53,25 @@ export default function Home() {
 
   // 학교일정
   const [showSchoolEventForm, setShowSchoolEventForm] = useState(false)
+  const [editingSchoolEvent,  setEditingSchoolEvent]  = useState<any>(null) // 수정 중인 학교일정
   const [schoolEventTitle,    setSchoolEventTitle]    = useState('')
   const [schoolEventContent,  setSchoolEventContent]  = useState('')
   const [schoolEventDate,     setSchoolEventDate]     = useState('')
   const [schoolEventEndDate,  setSchoolEventEndDate]  = useState('')
   const [schoolEventDateType, setSchoolEventDateType] = useState<'single'|'range'>('single')
   const [schoolEventGrade,    setSchoolEventGrade]    = useState<number | null>(null)
-  const [schoolEventType,     setSchoolEventType]     = useState<'학교행사'|'쉬는날'>('학교행사')
+  const [schoolEventType,     setSchoolEventType]     = useState<'학교행사'|'휴일'>('학교행사')
 
   // 날짜 팝업 일정 추가 기간
   const [popupDateType,  setPopupDateType]  = useState<'single'|'range'>('single')
   const [popupEndDate,   setPopupEndDate]   = useState('')
+
+  // 날짜 팝업 일정 수정 (기간만)
+  const [showEditEvent,   setShowEditEvent]   = useState(false)
+  const [editingEvent,    setEditingEvent]    = useState<any>(null)
+  const [editStartDate,   setEditStartDate]   = useState('')
+  const [editEndDate,     setEditEndDate]     = useState('')
+  const [editDateType,    setEditDateType]    = useState<'single'|'range'>('single')
 
   // 알림
   const [notifications,    setNotifications]    = useState<any[]>([])
@@ -120,7 +128,8 @@ export default function Home() {
       if (showMsgForm)         { setShowMsgForm(false); setMsgContent(''); return }
       if (showTeacherPicker)   { setShowTeacherPicker(false); return }
       if (showTeacherForm)     { setShowTeacherForm(false); resetTeacherForm(); return }
-      if (showSchoolEventForm) { setShowSchoolEventForm(false); return }
+      if (showSchoolEventForm) { setShowSchoolEventForm(false); resetSchoolEventForm(); return }
+      if (showEditEvent)       { setShowEditEvent(false); return }
       if (showDatePicker)      { cancelDatePicker(); return }
       if (showAddForm)         { setShowAddForm(false); return }
       if (showDatePopup)       { closeDatePopup(); return }
@@ -129,13 +138,14 @@ export default function Home() {
     window.addEventListener('popstate', handle)
     return () => window.removeEventListener('popstate', handle)
   }, [showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
-      showSchoolEventForm, showDatePicker, showAddForm, showDatePopup, showNotifications])
+      showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications])
 
   useEffect(() => { if (showNotifications)   pushHistory() }, [showNotifications])
   useEffect(() => { if (showDatePopup)        pushHistory() }, [showDatePopup])
   useEffect(() => { if (showAddForm)          pushHistory() }, [showAddForm])
   useEffect(() => { if (showDatePicker)       pushHistory() }, [showDatePicker])
   useEffect(() => { if (showSchoolEventForm)  pushHistory() }, [showSchoolEventForm])
+  useEffect(() => { if (showEditEvent)        pushHistory() }, [showEditEvent])
   useEffect(() => { if (showTeacherForm)      pushHistory() }, [showTeacherForm])
   useEffect(() => { if (showTeacherPicker)    pushHistory() }, [showTeacherPicker])
   useEffect(() => { if (showMsgForm)          pushHistory() }, [showMsgForm])
@@ -198,9 +208,9 @@ export default function Home() {
       await supabase.from('notifications')
         .upsert(missed.map(p => ({ user_id: uid, post_id: p.id, is_read: false })), { onConflict: 'user_id,post_id' })
 
-    // 새 유저 학교행사/쉬는날 자동 추가
+    // 새 유저 학교행사/휴일 자동 추가
     const { data: school } = await supabase.from('posts').select('id, default_date, end_date, category')
-      .eq('status','approved').in('category',['학교행사','쉬는날']).or(`grade.is.null,grade.eq.${grade}`)
+      .eq('status','approved').in('category',['학교행사','휴일']).or(`grade.is.null,grade.eq.${grade}`)
     if (school?.length)
       await supabase.from('user_calendar')
         .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date, end_date: p.end_date ?? null })), { onConflict: 'user_id,post_id' })
@@ -579,13 +589,83 @@ export default function Home() {
       backgroundColor:getCategoryColor(schoolEventType),
       borderColor:getCategoryColor(schoolEventType),
     }])
-    setShowSchoolEventForm(false); setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventEndDate(''); setSchoolEventGrade(null); setSchoolEventType('학교행사'); setSchoolEventDateType('single')
+    setShowSchoolEventForm(false); resetSchoolEventForm()
     alert('학교 일정이 추가됐어요!')
   }
 
-  const deleteEvent = async (eventId: string) => {
-    if (!user || !confirm('이 일정을 삭제할까요?')) return
-    await supabase.from('user_calendar').delete().eq('user_id',user.id).eq('post_id',eventId)
+  const resetSchoolEventForm = () => {
+    setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventEndDate('')
+    setSchoolEventGrade(null); setSchoolEventType('학교행사'); setSchoolEventDateType('single'); setEditingSchoolEvent(null)
+  }
+
+  const openEditSchoolEvent = (event: any) => {
+    setEditingSchoolEvent(event)
+    setSchoolEventTitle(event.title)
+    setSchoolEventContent(event.content || '')
+    setSchoolEventDate(event.date)
+    setSchoolEventEndDate(event.end_date || '')
+    setSchoolEventDateType(event.end_date ? 'range' : 'single')
+    setSchoolEventGrade(event.grade ?? null)
+    setSchoolEventType(event.category as '학교행사'|'휴일')
+    setShowSchoolEventForm(true)
+  }
+
+  const updateSchoolEvent = async () => {
+    if (!editingSchoolEvent || !schoolEventTitle || !schoolEventDate) { alert('제목과 날짜를 입력해주세요!'); return }
+    if (schoolEventDateType === 'range' && !schoolEventEndDate) { alert('종료 날짜를 입력해주세요!'); return }
+    const endDate = schoolEventDateType === 'range' ? schoolEventEndDate : null
+    const { error } = await supabase.from('posts').update({
+      title: schoolEventTitle, content: schoolEventContent,
+      default_date: schoolEventDate, end_date: endDate,
+      category: schoolEventType, grade: schoolEventGrade,
+    }).eq('id', editingSchoolEvent.id)
+    if (error) { alert(error.message); return }
+    // user_calendar도 업데이트
+    await supabase.from('user_calendar').update({ assigned_date: schoolEventDate, end_date: endDate })
+      .eq('post_id', editingSchoolEvent.id)
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    setEvents(prev => prev.map(e => e.id === editingSchoolEvent.id ? {
+      ...e, title: schoolEventTitle, content: schoolEventContent,
+      date: schoolEventDate, start: schoolEventDate, end: endExclusive,
+      category: schoolEventType, color: getCategoryColor(schoolEventType),
+      backgroundColor: getCategoryColor(schoolEventType), borderColor: getCategoryColor(schoolEventType),
+    } : e))
+    setShowSchoolEventForm(false); resetSchoolEventForm()
+  }
+
+  // 기간 수정 (학생/선생님용)
+  const openEditEvent = (event: any) => {
+    setEditingEvent(event)
+    setEditStartDate(event.date)
+    setEditEndDate(event.end_date || '')
+    setEditDateType(event.end_date ? 'range' : 'single')
+    setShowEditEvent(true)
+  }
+
+  const submitEditEvent = async () => {
+    if (!user || !editingEvent || !editStartDate) { alert('날짜를 입력해주세요!'); return }
+    if (editDateType === 'range' && !editEndDate) { alert('종료 날짜를 입력해주세요!'); return }
+    const endDate = editDateType === 'range' ? editEndDate : null
+    const { error } = await supabase.from('user_calendar')
+      .update({ assigned_date: editStartDate, end_date: endDate })
+      .eq('user_id', user.id).eq('post_id', editingEvent.id)
+    if (error) { alert(error.message); return }
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    setEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, date: editStartDate, start: editStartDate, end: endExclusive } : e))
+    setSelectedDateEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, date: editStartDate } : e))
+    setShowEditEvent(false); setEditingEvent(null); setEditStartDate(''); setEditEndDate(''); setEditDateType('single')
+  }
+
+  const deleteEvent = async (eventId: string, isSchoolEvent: boolean) => {
+    if (!user) return
+    if (isSchoolEvent) {
+      if (!confirm('이 학교 일정을 삭제할까요? 모든 학생의 캘린더에서 삭제됩니다.')) return
+      await supabase.from('user_calendar').delete().eq('post_id', eventId)
+      await supabase.from('posts').update({ status: 'rejected' }).eq('id', eventId)
+    } else {
+      if (!confirm('이 일정을 삭제할까요?')) return
+      await supabase.from('user_calendar').delete().eq('user_id', user.id).eq('post_id', eventId)
+    }
     setEvents(prev=>prev.filter(e=>e.id!==eventId)); setSelectedDateEvents(prev=>prev.filter(e=>e.id!==eventId))
   }
 
@@ -867,7 +947,7 @@ export default function Home() {
                   <div className="flex gap-2 mb-3">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">수행평가</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">학교행사</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">쉬는날</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">휴일</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">기타</span>
                   </div>
                   <Calendar events={events} onDateClick={handleDateClick} pendingPostId={pendingPostId} />
@@ -1153,15 +1233,15 @@ export default function Home() {
         </div>
       )}
 
-      {/* 학교 일정 추가 */}
+      {/* 학교 일정 추가/수정 */}
       {showSchoolEventForm && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[80vh] overflow-y-auto`}>
-            <h3 className="font-bold text-base mb-4">📅 학교 일정 추가</h3>
+            <h3 className="font-bold text-base mb-4">{editingSchoolEvent ? '✏️ 학교 일정 수정' : '📅 학교 일정 추가'}</h3>
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종류</p>
               <div className="flex gap-2">
-                {([{label:'🏫 학교행사', val:'학교행사'},{label:'🔴 쉬는날', val:'쉬는날'}] as const).map(({label,val})=>(
+                {([{label:'🏫 학교행사', val:'학교행사'},{label:'🔴 휴일', val:'휴일'}] as const).map(({label,val})=>(
                   <button key={val} onClick={()=>setSchoolEventType(val)}
                     className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {label}
@@ -1202,8 +1282,44 @@ export default function Home() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={()=>setShowSchoolEventForm(false)} className={BTN_GRAY}>취소</button>
-              <button onClick={submitSchoolEvent} className={BTN_GREEN}>추가</button>
+              <button onClick={()=>{ setShowSchoolEventForm(false); resetSchoolEventForm() }} className={BTN_GRAY}>취소</button>
+              <button onClick={editingSchoolEvent ? updateSchoolEvent : submitSchoolEvent} className={BTN_GREEN}>
+                {editingSchoolEvent ? '수정' : '추가'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 기간 수정 팝업 (학생/선생님용) */}
+      {showEditEvent && editingEvent && (
+        <div className={overlayClass}>
+          <div className={sheetClass}>
+            <h3 className="font-bold text-base mb-1">✏️ 기간 수정</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">{editingEvent.title}</p>
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
+              <div className="flex gap-2 mb-3">
+                {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
+                  <button key={val} onClick={()=>{ setEditDateType(val); if(val==='single') setEditEndDate('') }}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${editDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">시작 날짜</p>
+              <input type="date" value={editStartDate} onChange={e=>setEditStartDate(e.target.value)} className={INPUT} />
+              {editDateType === 'range' && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종료 날짜</p>
+                  <input type="date" value={editEndDate} onChange={e=>setEditEndDate(e.target.value)}
+                    min={editStartDate} className={INPUT} />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={()=>setShowEditEvent(false)} className={BTN_GRAY}>취소</button>
+              <button onClick={submitEditEvent} className={BTN_BLUE}>저장</button>
             </div>
           </div>
         </div>
@@ -1332,19 +1448,35 @@ export default function Home() {
             {selectedDateEvents.length===0
               ? <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">이날 일정이 없어요</p>
               : <div className="mb-3 flex flex-col gap-2">
-                  {selectedDateEvents.map(event => (
-                    <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
-                        <p className="font-medium text-sm mt-0.5">{event.title}</p>
-                        {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
+                  {selectedDateEvents.map(event => {
+                    const isSchoolEvent = event.category === '학교행사' || event.category === '휴일'
+                    const isMyEvent = event.created_by === user?.id || (!isSchoolEvent && !isAdmin)
+                    const canEdit = isSchoolEvent ? isAdmin : true   // 학교일정: 관리자만 / 나머지: 누구나
+                    const canDelete = isSchoolEvent ? isAdmin : true
+                    return (
+                      <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
+                          <p className="font-medium text-sm mt-0.5">{event.title}</p>
+                          {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          {isSchoolEvent && isAdmin && (
+                            <button onClick={()=>openEditSchoolEvent(event)}
+                              className="text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30">수정</button>
+                          )}
+                          {!isSchoolEvent && (
+                            <button onClick={()=>openEditEvent(event)}
+                              className="text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30">기간수정</button>
+                          )}
+                          {canDelete && (
+                            <button onClick={()=>deleteEvent(event.id, isSchoolEvent)}
+                              className="text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30">삭제</button>
+                          )}
+                        </div>
                       </div>
-                      {event.category !== '학교행사' && (
-                        <button onClick={()=>deleteEvent(event.id)}
-                          className="shrink-0 text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30">삭제</button>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
             }
             {showAddForm ? (

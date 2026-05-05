@@ -20,7 +20,7 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
 
   // 툴팁
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; event: any } | null>(null)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; events: any[] } | null>(null)
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const goToMonth = (year: number, month: number) => {
@@ -155,29 +155,27 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
       `}</style>
 
       {/* 이벤트 툴팁 */}
-      {tooltip && (
+      {tooltip && tooltip.events.length > 0 && (
         <div
           className="fixed z-[300] pointer-events-none animate-fade-in"
           style={{
-            left: Math.min(tooltip.x + 12, window.innerWidth - 220),
-            top: tooltip.y - 8,
-            transform: 'translateY(-100%)',
+            left: Math.min(tooltip.x + 4, window.innerWidth - 220),
+            top: tooltip.y,
+            transform: 'translateY(-100%) translateY(-8px)',
           }}
         >
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-52">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[tooltip.event.extendedProps?.category] ?? 'bg-gray-100 text-gray-600'}`}>
-                {tooltip.event.extendedProps?.category}
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tooltip.event.title}</p>
-            {tooltip.event.extendedProps?.content && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{tooltip.event.extendedProps.content}</p>
-            )}
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              {tooltip.event.startStr.split('T')[0]}
-              {tooltip.event.end && ` ~ ${new Date(new Date(tooltip.event.end).setDate(new Date(tooltip.event.end).getDate()-1)).toISOString().split('T')[0]}`}
-            </p>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-52 flex flex-col gap-2">
+            {tooltip.events.map((ev, i) => (
+              <div key={i} className={i > 0 ? 'pt-2 border-t border-gray-100 dark:border-gray-800' : ''}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {ev.category}
+                </span>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{ev.title}</p>
+                {ev.content && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{ev.content}</p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -198,14 +196,35 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         }}
         eventMouseEnter={(info) => {
           if (tooltipTimer.current) clearTimeout(tooltipTimer.current)
-          tooltipTimer.current = setTimeout(() => {
-            const rect = info.el.getBoundingClientRect()
-            setTooltip({ x: rect.left, y: rect.top, event: info.event })
-          }, 300)
+          const dateStr = info.event.startStr.split('T')[0]
+          const dayEvents = events.filter(e => e.date === dateStr || e.start === dateStr)
+          const rect = info.el.closest('.fc-daygrid-day')?.getBoundingClientRect() || info.el.getBoundingClientRect()
+          setTooltip({ x: rect.left, y: rect.top, events: dayEvents })
         }}
         eventMouseLeave={() => {
           if (tooltipTimer.current) clearTimeout(tooltipTimer.current)
-          tooltipTimer.current = setTimeout(() => setTooltip(null), 200)
+          tooltipTimer.current = setTimeout(() => setTooltip(null), 150)
+        }}
+        dayCellDidMount={(info) => {
+          info.el.addEventListener('mouseenter', () => {
+            if (tooltipTimer.current) clearTimeout(tooltipTimer.current)
+            const dateStr = info.date.toISOString().split('T')[0]
+            const dayEvents = events.filter(e => {
+              if (e.start) {
+                const start = e.start
+                const end = e.end ? new Date(new Date(e.end).setDate(new Date(e.end).getDate()-1)).toISOString().split('T')[0] : start
+                return dateStr >= start && dateStr <= end
+              }
+              return e.date === dateStr
+            })
+            if (dayEvents.length === 0) { setTooltip(null); return }
+            const rect = info.el.getBoundingClientRect()
+            setTooltip({ x: rect.left, y: rect.top, events: dayEvents })
+          })
+          info.el.addEventListener('mouseleave', () => {
+            if (tooltipTimer.current) clearTimeout(tooltipTimer.current)
+            tooltipTimer.current = setTimeout(() => setTooltip(null), 150)
+          })
         }}
         headerToolbar={false}
         dayHeaderFormat={{ weekday: 'narrow' }}

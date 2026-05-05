@@ -2190,16 +2190,18 @@ export default function Home() {
                   <button onClick={() => insertToContent('<div style="text-align:right">', '</div>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">≡ 오른쪽</button>
                   <div className="w-px bg-gray-200 dark:bg-gray-600 mx-0.5" />
-                  {/* 서식 */}
-                  <button onClick={() => insertToContent('**', '**')}
+                  {/* 서식 - HTML 태그로 변경 */}
+                  <button onClick={() => insertToContent('<strong>', '</strong>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg font-bold">B</button>
-                  <button onClick={() => insertToContent('*', '*')}
+                  <button onClick={() => insertToContent('<em>', '</em>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg italic">I</button>
-                  <button onClick={() => insertToContent('## ')}
-                    className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">H</button>
+                  <button onClick={() => insertToContent('<h2>', '</h2>')}
+                    className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">H2</button>
+                  <button onClick={() => insertToContent('<h3>', '</h3>')}
+                    className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">H3</button>
                   <div className="w-px bg-gray-200 dark:bg-gray-600 mx-0.5" />
                   {/* 링크 */}
-                  <button onClick={() => insertToContent('[', '](https://)')}
+                  <button onClick={() => insertToContent('<a href="https://">', '</a>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">🔗</button>
                   {/* 이미지 업로드 */}
                   <label className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer">

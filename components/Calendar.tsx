@@ -76,6 +76,10 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
           const dateStr = info.event.startStr.split('T')[0]
           onDateClick(dateStr)
         }}
+        dayCellClassNames={(arg) => {
+          // 쉬는날 이벤트가 있는 날짜 배경색 처리
+          return []
+        }}
         headerToolbar={{
           left: 'prev',
           center: 'title',
@@ -86,7 +90,7 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         contentHeight="auto"
         aspectRatio={1.2}
         locale="ko"
-        eventDisplay="block"
+        eventDisplay="auto"
       />
     </div>
   )

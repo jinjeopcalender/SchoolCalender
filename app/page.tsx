@@ -51,13 +51,19 @@ export default function Home() {
   const [popupCategory,      setPopupCategory]      = useState<Category>('수행평가')
   const [popupGrade,         setPopupGrade]         = useState<number | null>(null)
 
-  // 학교행사
+  // 학교일정
   const [showSchoolEventForm, setShowSchoolEventForm] = useState(false)
   const [schoolEventTitle,    setSchoolEventTitle]    = useState('')
   const [schoolEventContent,  setSchoolEventContent]  = useState('')
   const [schoolEventDate,     setSchoolEventDate]     = useState('')
+  const [schoolEventEndDate,  setSchoolEventEndDate]  = useState('')
+  const [schoolEventDateType, setSchoolEventDateType] = useState<'single'|'range'>('single')
   const [schoolEventGrade,    setSchoolEventGrade]    = useState<number | null>(null)
   const [schoolEventType,     setSchoolEventType]     = useState<'학교행사'|'쉬는날'>('학교행사')
+
+  // 날짜 팝업 일정 추가 기간
+  const [popupDateType,  setPopupDateType]  = useState<'single'|'range'>('single')
+  const [popupEndDate,   setPopupEndDate]   = useState('')
 
   // 알림
   const [notifications,    setNotifications]    = useState<any[]>([])
@@ -197,12 +203,25 @@ export default function Home() {
         .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date })), { onConflict: 'user_id,post_id' })
 
     const { data: cal } = await supabase
-      .from('user_calendar').select('assigned_date, posts(id,title,content,category)').eq('user_id', uid)
-    setEvents((cal||[]).map((item:any) => ({
-      id: item.posts.id, title: item.posts.title, content: item.posts.content,
-      category: item.posts.category, date: item.assigned_date,
-      color: getCategoryColor(item.posts.category),
-    })))
+      .from('user_calendar').select('assigned_date, end_date, posts(id,title,content,category)').eq('user_id', uid)
+    setEvents((cal||[]).map((item:any) => {
+      const isHoliday = item.posts.category === '쉬는날'
+      // FullCalendar end는 exclusive이므로 하루 더 필요
+      const endDateExclusive = item.end_date
+        ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+        : undefined
+      return {
+        id: item.posts.id, title: item.posts.title, content: item.posts.content,
+        category: item.posts.category, date: item.assigned_date,
+        start: item.assigned_date,
+        end: endDateExclusive,
+        color: getCategoryColor(item.posts.category),
+        // 쉬는날은 배경도 빨갛게
+        display: isHoliday ? 'background' : 'block',
+        backgroundColor: isHoliday ? '#fef2f2' : undefined,
+        textColor: isHoliday ? '#ef4444' : undefined,
+      }
+    }))
 
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,category)')
@@ -238,10 +257,20 @@ export default function Home() {
         async (payload) => {
           const { data: p } = await supabase.from('posts')
             .select('id,title,content,category').eq('id', payload.new.post_id).single()
-          if (p) setEvents(prev => prev.some(e=>e.id===p.id) ? prev : [...prev, {
-            id:p.id, title:p.title, content:p.content, category:p.category,
-            date:payload.new.assigned_date, color:getCategoryColor(p.category),
-          }])
+          if (p) {
+            const isHoliday = p.category === '쉬는날'
+            const endDateExclusive = payload.new.end_date
+              ? (() => { const d = new Date(payload.new.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+              : undefined
+            setEvents(prev => prev.some(e=>e.id===p.id) ? prev : [...prev, {
+              id:p.id, title:p.title, content:p.content, category:p.category,
+              date:payload.new.assigned_date, start:payload.new.assigned_date, end:endDateExclusive,
+              color:getCategoryColor(p.category),
+              display: isHoliday ? 'background' : 'block',
+              backgroundColor: isHoliday ? '#fef2f2' : undefined,
+              textColor: isHoliday ? '#ef4444' : undefined,
+            }])
+          }
         })
       .subscribe()
 
@@ -485,7 +514,7 @@ export default function Home() {
 
   const closeDatePopup = () => {
     setShowDatePopup(false); setSelectedDate(null); setSelectedDateEvents([])
-    setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupCategory('수행평가'); setPopupGrade(null)
+    setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupCategory('수행평가'); setPopupGrade(null); setPopupDateType('single'); setPopupEndDate('')
   }
 
   const handleDateClick = (date: string) => {
@@ -498,31 +527,67 @@ export default function Home() {
     if (!user || !selectedDate || !popupTitle) { alert('제목을 입력해주세요!'); return }
     const targetGrade = (isAdmin || isTeacher) ? popupGrade : userGrade
     if (!targetGrade) { alert('학년을 선택해주세요!'); return }
+
+    // 선생님은 승인 없이 바로 approved
+    const status = isTeacher ? 'approved' : 'pending'
+
+    const endDate = popupDateType === 'range' && popupEndDate ? popupEndDate : null
     const { data: postData, error } = await supabase.from('posts').insert({
-      title:popupTitle, content:popupContent, status:'pending', created_by:user.id,
-      default_date:selectedDate, category:popupCategory, grade:targetGrade, is_user_generated:true,
+      title:popupTitle, content:popupContent, status, created_by:user.id,
+      default_date:selectedDate, end_date:endDate, category:popupCategory, grade:targetGrade, is_user_generated:true,
     }).select().single()
     if (error) { alert(error.message); return }
-    await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate })
-    const ev = { id:postData.id, title:popupTitle, content:popupContent, category:popupCategory, date:selectedDate, color:getCategoryColor(popupCategory) }
-    setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
-    setShowAddForm(false); setPopupTitle(''); setPopupContent('')
+
+    // 본인 캘린더에 추가 (선생님은 학년 없으므로 건너뜀)
+    if (!isTeacher) {
+      await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate, end_date:endDate })
+    }
+
+    // 선생님이 approved로 올리면 해당 학년 학생들에게 알림 직접 생성
+    if (isTeacher) {
+      const { data: targetUsers } = await supabase.from('users').select('id')
+        .eq('grade', targetGrade).neq('role', 'teacher').neq('role', 'admin')
+      if (targetUsers?.length) {
+        await supabase.from('notifications').insert(
+          targetUsers.map(u => ({ user_id: u.id, post_id: postData.id, is_read: false, status: 'pending' }))
+        )
+      }
+    }
+
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    const ev = { id:postData.id, title:popupTitle, content:popupContent, category:popupCategory, date:selectedDate, start:selectedDate, end:endExclusive, color:getCategoryColor(popupCategory) }
+    if (!isTeacher) {
+      setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
+    }
+    setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupDateType('single'); setPopupEndDate('')
+    if (isTeacher) alert('일정이 등록됐어요! 해당 학년 학생들에게 알림이 전송됐어요.')
   }
 
   const submitSchoolEvent = async () => {
     if (!user || !schoolEventTitle || !schoolEventDate) { alert('제목과 날짜를 입력해주세요!'); return }
+    if (schoolEventDateType === 'range' && !schoolEventEndDate) { alert('종료 날짜를 입력해주세요!'); return }
+    const endDate = schoolEventDateType === 'range' ? schoolEventEndDate : null
     const { data: postData, error } = await supabase.from('posts').insert({
       title:schoolEventTitle, content:schoolEventContent, status:'approved', created_by:user.id,
-      default_date:schoolEventDate, category:schoolEventType, grade:schoolEventGrade, is_user_generated:false,
+      default_date:schoolEventDate, end_date:endDate, category:schoolEventType, grade:schoolEventGrade, is_user_generated:false,
     }).select().single()
     if (error) { alert(error.message); return }
     let q = supabase.from('users').select('id')
     if (schoolEventGrade) q = q.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await q
     if (targetUsers?.length)
-      await supabase.from('user_calendar').insert(targetUsers.map(u=>({ user_id:u.id, post_id:postData.id, assigned_date:schoolEventDate })))
-    setShowSchoolEventForm(false); setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventGrade(null); setSchoolEventType('학교행사')
-    setEvents(prev=>[...prev,{ id:postData.id, title:schoolEventTitle, content:schoolEventContent, category:schoolEventType, date:schoolEventDate, color:getCategoryColor(schoolEventType) }])
+      await supabase.from('user_calendar').insert(targetUsers.map(u=>({ user_id:u.id, post_id:postData.id, assigned_date:schoolEventDate, end_date:endDate })))
+    const isHoliday = schoolEventType === '쉬는날'
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    setEvents(prev=>[...prev,{
+      id:postData.id, title:schoolEventTitle, content:schoolEventContent, category:schoolEventType,
+      date:schoolEventDate, start:schoolEventDate, end:endExclusive,
+      color:getCategoryColor(schoolEventType),
+      display: isHoliday ? 'background' : 'block',
+      backgroundColor: isHoliday ? '#fef2f2' : undefined,
+      textColor: isHoliday ? '#ef4444' : undefined,
+    }])
+    setShowSchoolEventForm(false); setSchoolEventTitle(''); setSchoolEventContent(''); setSchoolEventDate(''); setSchoolEventEndDate(''); setSchoolEventGrade(null); setSchoolEventType('학교행사'); setSchoolEventDateType('single')
     alert('학교 일정이 추가됐어요!')
   }
 
@@ -743,7 +808,9 @@ export default function Home() {
               {/* 캘린더 탭 */}
               {activeTab === 'calendar' && (
                 <div className="px-3 py-4 md:px-6 md:py-6">
-                  {(isAdmin || isTeacher) && (
+
+                  {/* 관리자 패널 */}
+                  {isAdmin && (
                     <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900">
                       <div className="flex items-center justify-between mb-3">
                         <h2 className="text-base font-bold">🛠 관리자</h2>
@@ -1105,8 +1172,23 @@ export default function Home() {
             <input placeholder="일정 제목" value={schoolEventTitle} onChange={e=>setSchoolEventTitle(e.target.value)} className={`${INPUT} mb-2`} />
             <textarea placeholder="내용 (선택)" value={schoolEventContent} onChange={e=>setSchoolEventContent(e.target.value)} className={`${INPUT} mb-2`} rows={2} />
             <div className="mb-2">
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">날짜</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
+              <div className="flex gap-2 mb-2">
+                {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
+                  <button key={val} onClick={()=>{ setSchoolEventDateType(val); if(val==='single') setSchoolEventEndDate('') }}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
               <input type="date" value={schoolEventDate} onChange={e=>setSchoolEventDate(e.target.value)} className={INPUT} />
+              {schoolEventDateType === 'range' && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종료 날짜</p>
+                  <input type="date" value={schoolEventEndDate} onChange={e=>setSchoolEventEndDate(e.target.value)}
+                    min={schoolEventDate} className={INPUT} />
+                </div>
+              )}
             </div>
             <div className="mb-4">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
@@ -1262,6 +1344,26 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+                <div className="mb-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
+                  <div className="flex gap-2 mb-2">
+                    {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
+                      <button key={val} onClick={()=>{ setPopupDateType(val); if(val==='single') setPopupEndDate('') }}
+                        className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {popupDateType === 'single'
+                    ? <p className="text-xs text-gray-400 dark:text-gray-500">선택한 날짜: <span className="font-medium text-gray-700 dark:text-gray-200">{selectedDate}</span></p>
+                    : <div className="flex items-center gap-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 shrink-0">시작: <span className="font-medium">{selectedDate}</span></p>
+                        <span className="text-gray-300">~</span>
+                        <input type="date" value={popupEndDate} onChange={e=>setPopupEndDate(e.target.value)}
+                          min={selectedDate ?? ''} className={`${INPUT} flex-1`} placeholder="종료 날짜" />
+                      </div>
+                  }
+                </div>
                 <input placeholder="제목" value={popupTitle} onChange={e=>setPopupTitle(e.target.value)} className={`${INPUT} mb-2`} />
                 <textarea placeholder="내용 (선택)" value={popupContent} onChange={e=>setPopupContent(e.target.value)} className={`${INPUT} mb-3`} rows={3} />
                 <div className="flex gap-2">

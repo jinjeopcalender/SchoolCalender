@@ -89,6 +89,15 @@ export default function Home() {
   const [pickerDateType,    setPickerDateType]    = useState<'single'|'range'>('single')
   const pendingEndDateRef = useRef<string | null>(null)
 
+  // 토스트
+  const [toast, setToast] = useState<{msg: string; type: 'success'|'error'|'info'} | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showToast = (msg: string, type: 'success'|'error'|'info' = 'success') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ msg, type })
+    toastTimer.current = setTimeout(() => setToast(null), 3000)
+  }
+
   // 선생님 관리
   const [teachers,        setTeachers]        = useState<any[]>([])
   const [showTeacherForm, setShowTeacherForm] = useState(false)
@@ -237,7 +246,7 @@ export default function Home() {
         .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date, end_date: p.end_date ?? null })), { onConflict: 'user_id,post_id' })
 
     const { data: cal } = await supabase
-      .from('user_calendar').select('assigned_date, end_date, posts(id,title,content,category)').eq('user_id', uid)
+      .from('user_calendar').select('assigned_date, end_date, posts(id,title,content,category,created_by)').eq('user_id', uid)
     setEvents((cal||[]).map((item:any) => {
       // FullCalendar end는 exclusive이므로 하루 더 필요
       const endDateExclusive = item.end_date
@@ -246,6 +255,7 @@ export default function Home() {
       return {
         id: item.posts.id, title: item.posts.title, content: item.posts.content,
         category: item.posts.category, date: item.assigned_date,
+        created_by: item.posts.created_by,
         start: item.assigned_date,
         end: endDateExclusive,
         color: getCategoryColor(item.posts.category),
@@ -287,13 +297,14 @@ export default function Home() {
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'user_calendar', filter:`user_id=eq.${uid}` },
         async (payload) => {
           const { data: p } = await supabase.from('posts')
-            .select('id,title,content,category').eq('id', payload.new.post_id).single()
+            .select('id,title,content,category,created_by').eq('id', payload.new.post_id).single()
           if (p) {
             const endDateExclusive = payload.new.end_date
               ? (() => { const d = new Date(payload.new.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
               : undefined
             setEvents(prev => prev.some(e=>e.id===p.id) ? prev : [...prev, {
               id:p.id, title:p.title, content:p.content, category:p.category,
+              created_by:p.created_by,
               date:payload.new.assigned_date, start:payload.new.assigned_date, end:endDateExclusive,
               color:getCategoryColor(p.category),
               backgroundColor:getCategoryColor(p.category),
@@ -426,7 +437,7 @@ export default function Home() {
   const selectMyTeacher = async (t: any) => {
     if (!user) return
     const { error } = await supabase.from('teachers').update({ user_id: user.id }).eq('id', t.id)
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     setMyTeacherRow(t)
     setShowTeacherPicker(false)
     await loadMessages(user.id, false, true, t)
@@ -439,15 +450,15 @@ export default function Home() {
   const openEditTeacher  = (t: any) => { setEditingTeacher(t); setTeacherName(t.name); setTeacherSubject(t.subject); setTeacherLocation(t.location); setShowTeacherForm(true) }
 
   const submitTeacher = async () => {
-    if (!teacherName.trim() || !teacherLocation.trim()) { alert('성함과 위치를 입력해주세요!'); return }
+    if (!teacherName.trim() || !teacherLocation.trim()) { showToast('성함과 위치를 입력해주세요!', 'error'); return }
     if (editingTeacher) {
       const { error } = await supabase.from('teachers')
         .update({ name: teacherName.trim(), subject: teacherSubject, location: teacherLocation.trim() }).eq('id', editingTeacher.id)
-      if (error) { alert(error.message); return }
+      if (error) { showToast(error.message, 'error'); return }
     } else {
       const { error } = await supabase.from('teachers')
         .insert({ name: teacherName.trim(), subject: teacherSubject, location: teacherLocation.trim() })
-      if (error) { alert(error.message); return }
+      if (error) { showToast(error.message, 'error'); return }
     }
     await loadTeachers(); setShowTeacherForm(false); resetTeacherForm()
   }
@@ -462,16 +473,15 @@ export default function Home() {
   const openMsgForm = (t: any) => { setMsgTarget(t); setMsgContent(''); setShowMsgForm(true) }
 
   const submitMessage = async () => {
-    if (!user || !msgTarget || !msgContent.trim()) { alert('내용을 입력해주세요!'); return }
+    if (!user || !msgTarget || !msgContent.trim()) { showToast('내용을 입력해주세요!', 'error'); return }
     // 관리자는 바로 approved, 일반 사용자는 pending
     const status = isAdmin ? 'approved' : 'pending'
     const { error } = await supabase.from('messages').insert({
       sender_id: user.id, teacher_id: msgTarget.id, content: msgContent.trim(), status,
     })
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     setShowMsgForm(false); setMsgContent('')
-    if (isAdmin) alert('메시지가 선생님께 바로 전달됐어요!')
-    else alert('전송됐어요! 관리자 검토 후 선생님께 전달돼요.')
+    showToast(isAdmin ? '메시지가 선생님께 바로 전달됐어요!' : '전송됐어요! 관리자 검토 후 선생님께 전달돼요.')
   }
 
   const approveMessage = async (id: string) => {
@@ -487,10 +497,10 @@ export default function Home() {
   const openReplyForm = (m: any) => { setReplyTarget(m); setReplyContent(''); setShowReplyForm(true) }
 
   const submitReply = async () => {
-    if (!replyTarget || !replyContent.trim()) { alert('답장 내용을 입력해주세요!'); return }
+    if (!replyTarget || !replyContent.trim()) { showToast('답장 내용을 입력해주세요!', 'error'); return }
     const { error } = await supabase.from('messages')
       .update({ reply: replyContent.trim(), reply_read: false }).eq('id', replyTarget.id)
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     setMyMessages(prev => prev.map(m => m.id === replyTarget.id ? { ...m, reply: replyContent.trim(), reply_read: false } : m))
     setShowReplyForm(false); setReplyContent(''); setReplyTarget(null)
   }
@@ -528,7 +538,7 @@ export default function Home() {
     }
     // 비밀번호 맞으면 role을 teacher로 업데이트, grade는 null
     const { error } = await supabase.from('users').update({ role: 'teacher', grade: null }).eq('id', user.id)
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     setIsTeacher(true)
     setShowGradePicker(false)
     setShowTeacherAuth(false)
@@ -553,9 +563,9 @@ export default function Home() {
   }
 
   const submitPost = async () => {
-    if (!user || !selectedDate || !popupTitle) { alert('제목을 입력해주세요!'); return }
+    if (!user || !selectedDate || !popupTitle) { showToast('제목을 입력해주세요!', 'error'); return }
     const targetGrade = (isAdmin || isTeacher) ? popupGrade : userGrade
-    if (!targetGrade) { alert('학년을 선택해주세요!'); return }
+    if (!targetGrade) { showToast('학년을 선택해주세요!', 'error'); return }
 
     // 선생님은 승인 없이 바로 approved
     const status = isTeacher ? 'approved' : 'pending'
@@ -565,7 +575,7 @@ export default function Home() {
       title:popupTitle, content:popupContent, status, created_by:user.id,
       default_date:selectedDate, end_date:endDate, category:popupCategory, grade:targetGrade, is_user_generated:true,
     }).select().single()
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
 
     // 본인 캘린더에 추가 (선생님도 포함)
     await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate, end_date:endDate })
@@ -585,18 +595,18 @@ export default function Home() {
     const ev = { id:postData.id, title:popupTitle, content:popupContent, category:popupCategory, date:selectedDate, start:selectedDate, end:endExclusive, color:getCategoryColor(popupCategory) }
     setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
     setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupDateType('single'); setPopupEndDate('')
-    if (isTeacher) alert('일정이 등록됐어요! 해당 학년 학생들에게 알림이 전송됐어요.')
+    if (isTeacher) showToast('일정이 등록됐어요! 해당 학년 학생들에게 알림이 전송됐어요.')
   }
 
   const submitSchoolEvent = async () => {
-    if (!user || !schoolEventTitle || !schoolEventDate) { alert('제목과 날짜를 입력해주세요!'); return }
-    if (schoolEventDateType === 'range' && !schoolEventEndDate) { alert('종료 날짜를 입력해주세요!'); return }
+    if (!user || !schoolEventTitle || !schoolEventDate) { showToast('제목과 날짜를 입력해주세요!', 'error'); return }
+    if (schoolEventDateType === 'range' && !schoolEventEndDate) { showToast('종료 날짜를 입력해주세요!', 'error'); return }
     const endDate = schoolEventDateType === 'range' ? schoolEventEndDate : null
     const { data: postData, error } = await supabase.from('posts').insert({
       title:schoolEventTitle, content:schoolEventContent, status:'approved', created_by:user.id,
       default_date:schoolEventDate, end_date:endDate, category:schoolEventType, grade:schoolEventGrade, is_user_generated:false,
     }).select().single()
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     let q = supabase.from('users').select('id')
     if (schoolEventGrade) q = q.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await q
@@ -611,7 +621,7 @@ export default function Home() {
       borderColor:getCategoryColor(schoolEventType),
     }])
     setShowSchoolEventForm(false); resetSchoolEventForm()
-    alert('학교 일정이 추가됐어요!')
+    showToast('학교 일정이 추가됐어요!')
   }
 
   const resetSchoolEventForm = () => {
@@ -633,15 +643,15 @@ export default function Home() {
   }
 
   const updateSchoolEvent = async () => {
-    if (!editingSchoolEvent || !schoolEventTitle || !schoolEventDate) { alert('제목과 날짜를 입력해주세요!'); return }
-    if (schoolEventDateType === 'range' && !schoolEventEndDate) { alert('종료 날짜를 입력해주세요!'); return }
+    if (!editingSchoolEvent || !schoolEventTitle || !schoolEventDate) { showToast('제목과 날짜를 입력해주세요!', 'error'); return }
+    if (schoolEventDateType === 'range' && !schoolEventEndDate) { showToast('종료 날짜를 입력해주세요!', 'error'); return }
     const endDate = schoolEventDateType === 'range' ? schoolEventEndDate : null
     const { error } = await supabase.from('posts').update({
       title: schoolEventTitle, content: schoolEventContent,
       default_date: schoolEventDate, end_date: endDate,
       category: schoolEventType, grade: schoolEventGrade,
     }).eq('id', editingSchoolEvent.id)
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     // user_calendar도 업데이트
     await supabase.from('user_calendar').update({ assigned_date: schoolEventDate, end_date: endDate })
       .eq('post_id', editingSchoolEvent.id)
@@ -666,13 +676,13 @@ export default function Home() {
   }
 
   const submitEditEvent = async () => {
-    if (!user || !editingEvent || !editStartDate) { alert('날짜를 입력해주세요!'); return }
-    if (editDateType === 'range' && !editEndDate) { alert('종료 날짜를 입력해주세요!'); return }
+    if (!user || !editingEvent || !editStartDate) { showToast('날짜를 입력해주세요!', 'error'); return }
+    if (editDateType === 'range' && !editEndDate) { showToast('종료 날짜를 입력해주세요!', 'error'); return }
     const endDate = editDateType === 'range' ? editEndDate : null
     const { error } = await supabase.from('user_calendar')
       .update({ assigned_date: editStartDate, end_date: endDate })
       .eq('user_id', user.id).eq('post_id', editingEvent.id)
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
     setEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, date: editStartDate, start: editStartDate, end: endExclusive } : e))
     setSelectedDateEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, date: editStartDate } : e))
@@ -704,12 +714,12 @@ export default function Home() {
   }
 
   const confirmDatePicker = async () => {
-    if (!user || !pickerDate) { alert('날짜를 선택해주세요!'); return }
-    if (pickerDateType === 'range' && !pickerEndDate) { alert('종료 날짜를 선택해주세요!'); return }
+    if (!user || !pickerDate) { showToast('날짜를 선택해주세요!', 'error'); return }
+    if (pickerDateType === 'range' && !pickerEndDate) { showToast('종료 날짜를 선택해주세요!', 'error'); return }
     const endDate = pickerDateType === 'range' ? pickerEndDate : null
     const { error } = await supabase.from('user_calendar')
       .upsert({ user_id:user.id, post_id:pendingPostId!, assigned_date:pickerDate, end_date:endDate }, { onConflict:'user_id,post_id' })
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     if (pendingNotifIdRef.current)
       await supabase.from('notifications').update({ status:'accepted', is_read:true }).eq('id', pendingNotifIdRef.current)
     setNotifications(prev=>prev.filter(n=>n.id!==pendingNotifIdRef.current))
@@ -736,7 +746,7 @@ export default function Home() {
 
   const approvePost = async (postId: string) => {
     const { error } = await supabase.from('posts').update({ status:'approved' }).eq('id',postId)
-    if (error) { alert(error.message); return }
+    if (error) { showToast(error.message, 'error'); return }
     setPendingPosts(prev=>prev.filter(p=>p.id!==postId))
   }
   const rejectPost = async (postId: string) => {
@@ -753,6 +763,19 @@ export default function Home() {
   const overlayClass = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in"
   const sheetClass   = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
   const LOGIN_REQUIRED = "로그인 후 이용할 수 있어요"
+
+  const toastColors = {
+    success: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900',
+    error:   'bg-red-500 text-white',
+    info:    'bg-blue-500 text-white',
+  }
+
+  const ToastUI = toast ? (
+    <div className={`fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-2xl shadow-xl text-sm font-medium toast-in max-w-xs w-max ${toastColors[toast.type]}`}>
+      {toast.type === 'success' && '✅ '}{toast.type === 'error' && '⚠️ '}{toast.type === 'info' && 'ℹ️ '}
+      {toast.msg}
+    </div>
+  ) : null
 
   // ── 선생님 본인 선택 화면 ──────────────────────────────────────
   if (user && isTeacher && showTeacherPicker) {
@@ -832,6 +855,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+      {ToastUI}
       {!user ? (
         <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
           {/* 헤더 */}
@@ -932,7 +956,7 @@ export default function Home() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
                                       </div>
                                       {t.user_id && (
-                                        <button onClick={() => alert('로그인 후 이용할 수 있어요 😊')}
+                                        <button onClick={() => showToast('로그인 후 이용할 수 있어요 😊', 'info')}
                                           className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
                                           💬 메시지
                                         </button>
@@ -1003,7 +1027,7 @@ export default function Home() {
                 <div className="flex flex-wrap items-center gap-1 mt-0.5">
                   {userGrade && <span className="text-xs text-gray-400 dark:text-gray-500">{userGrade}학년</span>}
                   {isAdmin   && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
-                  {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name} 선생님</span>}
+                  {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 md:w-full">
@@ -1627,9 +1651,8 @@ export default function Home() {
               : <div className="mb-3 flex flex-col gap-2">
                   {selectedDateEvents.map(event => {
                     const isSchoolEvent = event.category === '학교행사' || event.category === '휴일'
-                    const isMyEvent = event.created_by === user?.id || (!isSchoolEvent && !isAdmin)
-                    const canEdit = isSchoolEvent ? isAdmin : true   // 학교일정: 관리자만 / 나머지: 누구나
-                    const canDelete = isSchoolEvent ? isAdmin : true
+                    const isMyEvent = event.created_by === user?.id
+                    const canDelete = isSchoolEvent ? isAdmin : (isMyEvent || isAdmin)
                     return (
                       <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">

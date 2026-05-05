@@ -34,10 +34,10 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
           padding: 4px 8px !important;
           font-size: 0.7rem !important;
         }
-        .fc .fc-daygrid-day { min-height: 40px !important; }
+        .fc .fc-daygrid-day { min-height: 52px !important; }
         .fc .fc-daygrid-day-number {
           font-size: 0.75rem;
-          padding: 2px 4px !important;
+          padding: 4px 6px !important;
         }
         .fc .fc-daygrid-event {
           white-space: nowrap;
@@ -64,7 +64,7 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         }
         @media (max-width: 480px) {
           .fc .fc-toolbar { justify-content: space-between; }
-          .fc .fc-daygrid-day { min-height: 36px !important; }
+          .fc .fc-daygrid-day { min-height: 48px !important; }
         }
       `}</style>
       <FullCalendar

@@ -160,7 +160,28 @@ export default function Home() {
       const { data, error } = await supabase.auth.getUser()
       if (error) { await supabase.auth.signOut(); return }
       const cu = data.user
-      if (!cu) return
+
+      // 비로그인: 공개 데이터만 로드
+      if (!cu) {
+        await loadTeachers()
+        const { data: schoolPosts } = await supabase.from('posts')
+          .select('id, title, content, category, default_date, end_date')
+          .eq('status', 'approved').in('category', ['학교행사', '휴일'])
+        setEvents((schoolPosts||[]).map(p => {
+          const endExclusive = p.end_date
+            ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+            : undefined
+          return {
+            id: p.id, title: p.title, content: p.content, category: p.category,
+            date: p.default_date, start: p.default_date, end: endExclusive,
+            color: getCategoryColor(p.category),
+            backgroundColor: getCategoryColor(p.category),
+            borderColor: getCategoryColor(p.category),
+          }
+        }))
+        return
+      }
+
       setUser(cu)
 
       await supabase.from('users').upsert({ id: cu.id, name: cu.user_metadata.full_name })
@@ -731,6 +752,7 @@ export default function Home() {
 
   const overlayClass = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in"
   const sheetClass   = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
+  const LOGIN_REQUIRED = "로그인 후 이용할 수 있어요"
 
   // ── 선생님 본인 선택 화면 ──────────────────────────────────────
   if (user && isTeacher && showTeacherPicker) {
@@ -811,11 +833,164 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {!user ? (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6">
-          <h1 className="text-2xl font-bold">📅 학교 캘린더</h1>
-          <button onClick={login} className="btn px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold w-full max-w-xs shadow-md shadow-blue-200 dark:shadow-blue-900/30">
-            Google로 로그인
-          </button>
+        <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+          {/* 헤더 */}
+          <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between max-w-5xl mx-auto">
+            <div>
+              <h1 className="text-base font-bold">📅 학교 캘린더</h1>
+              <p className="text-xs text-gray-400 dark:text-gray-500">로그인하면 더 많은 기능을 이용할 수 있어요</p>
+            </div>
+            <button onClick={login} className="btn px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-200 dark:shadow-blue-900/30 whitespace-nowrap">
+              로그인
+            </button>
+          </div>
+
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row">
+            {/* 왼쪽: 탭 */}
+            <div className="md:w-64 md:border-r md:border-gray-200 md:dark:border-gray-700 md:min-h-screen md:p-3">
+              <div className="hidden md:flex md:flex-col md:gap-1 md:mt-3">
+                <button onClick={() => setActiveTab('calendar')}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab==='calendar'?'bg-blue-50 dark:bg-blue-900/30 text-blue-500':'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  <span className="text-lg">📅</span>캘린더
+                </button>
+                <button onClick={() => setActiveTab('teacher')}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab==='teacher'?'bg-blue-50 dark:bg-blue-900/30 text-blue-500':'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  <span className="text-lg">🏫</span>선생님 위치
+                </button>
+              </div>
+            </div>
+
+            {/* 메인 */}
+            <div className="flex-1 pb-20 md:pb-6">
+              {activeTab === 'calendar' && (
+                <div className="px-3 py-4 md:px-6 md:py-6">
+                  {/* 로그인 안내 배너 */}
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
+                    <span className="text-xl">🔒</span>
+                    <div>
+                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">수행평가·기타 일정은 로그인 후 확인</p>
+                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">학교 일정과 선생님 위치는 지금 바로 볼 수 있어요</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mb-3">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">학교행사</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">휴일</span>
+                  </div>
+                  <Calendar
+                    events={events}
+                    onDateClick={(date) => {
+                      const dayEvents = events.filter(e => e.date === date)
+                      setSelectedDate(date)
+                      setSelectedDateEvents(dayEvents)
+                      setShowDatePopup(true)
+                    }}
+                    pendingPostId={null}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'teacher' && (
+                <div className="flex flex-col">
+                  {/* 로그인 안내 배너 */}
+                  <div className="mx-3 mt-4 mb-3 md:mx-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
+                    <span className="text-xl">💬</span>
+                    <div>
+                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">메시지는 로그인 후 이용 가능해요</p>
+                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">선생님 위치는 지금 바로 확인할 수 있어요</p>
+                    </div>
+                  </div>
+                  {teachers.length === 0
+                    ? <div className="flex flex-col items-center justify-center h-48 gap-3 text-gray-400 dark:text-gray-500">
+                        <p className="text-4xl">🏫</p>
+                        <p className="text-sm">등록된 선생님이 없어요</p>
+                      </div>
+                    : <div className="flex flex-col">
+                        {Object.entries(teachers.reduce((acc, t) => {
+                          if (!acc[t.subject]) acc[t.subject] = []
+                          acc[t.subject].push(t); return acc
+                        }, {} as Record<string, any[]>)).map(([subject, list]) => {
+                          const isOpen = openSubjects.has(subject)
+                          return (
+                            <div key={subject} className="border-b border-gray-200 dark:border-gray-700">
+                              <button onClick={() => toggleSubject(subject)}
+                                className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 transition-colors">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{subject}</p>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">{(list as any[]).length}명</span>
+                                </div>
+                                <span className={`text-gray-400 text-xs transition-transform duration-200 ${isOpen?'rotate-180':''}`}>▼</span>
+                              </button>
+                              {isOpen && (
+                                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                                  {(list as any[]).map(t => (
+                                    <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white dark:bg-gray-950">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <p className="text-base font-semibold">{t.name} 선생님</p>
+                                          {t.user_id && <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">인증됨</span>}
+                                        </div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
+                                      </div>
+                                      {t.user_id && (
+                                        <button onClick={() => alert('로그인 후 이용할 수 있어요 😊')}
+                                          className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
+                                          💬 메시지
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 모바일 하단 탭 */}
+          <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden">
+            <button onClick={() => setActiveTab('calendar')}
+              className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab==='calendar'?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
+              <span className="text-xl">📅</span>캘린더
+            </button>
+            <button onClick={() => setActiveTab('teacher')}
+              className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab==='teacher'?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
+              <span className="text-xl">🏫</span>선생님 위치
+            </button>
+          </div>
+
+          {/* 날짜 클릭 팝업 (비로그인) */}
+          {showDatePopup && selectedDate && (
+            <div className={overlayClass}>
+              <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
+                <h3 className="font-bold text-base mb-3">📅 {selectedDate}</h3>
+                {selectedDateEvents.length === 0
+                  ? <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">이날 학교 일정이 없어요</p>
+                  : <div className="mb-3 flex flex-col gap-2">
+                      {selectedDateEvents.map(event => (
+                        <div key={event.id} className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
+                          <p className="font-medium text-sm mt-0.5">{event.title}</p>
+                          {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
+                        </div>
+                      ))}
+                    </div>
+                }
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl mb-3">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">🔒 수행평가·기타 일정</p>
+                  <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">로그인 후 확인할 수 있어요</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowDatePopup(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
+                  <button onClick={login} className="btn flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium">로그인</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col md:flex-row min-h-screen max-w-5xl mx-auto">

@@ -281,8 +281,8 @@ export default function Home() {
     supabase.removeAllChannels()
     const init = async () => {
       const { data, error } = await supabase.auth.getUser()
-      if (error) { await supabase.auth.signOut(); return }
-      const cu = data.user
+      // 인증 에러여도 비로그인으로 처리 (signOut은 실제 세션이 있을 때만)
+      const cu = error ? null : data.user
 
       // 비로그인: 공개 데이터만 로드
       if (!cu) {

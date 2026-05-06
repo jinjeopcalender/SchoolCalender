@@ -3,7 +3,7 @@
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface CalendarProps {
   events: any[]
@@ -45,6 +45,19 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
     setCurrentYear(d.getFullYear()); setCurrentMonth(d.getMonth())
     onCellHover('', null)
   }
+
+  // 공휴일 날짜 글자 빨간색 적용 (events 로드 후에도 반영)
+  useEffect(() => {
+    if (!holidayDates || holidayDates.size === 0) return
+    const cells = document.querySelectorAll('.fc-daygrid-day')
+    cells.forEach(cell => {
+      const dateAttr = cell.getAttribute('data-date')
+      if (dateAttr && holidayDates.has(dateAttr)) {
+        const numEl = cell.querySelector('.fc-daygrid-day-number') as HTMLElement
+        if (numEl) numEl.style.color = '#ef4444'
+      }
+    })
+  }, [holidayDates])
 
   const today = new Date()
 
@@ -130,11 +143,6 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
         }}
         dayCellDidMount={(info) => {
           const dateStr = `${info.date.getFullYear()}-${String(info.date.getMonth()+1).padStart(2,'0')}-${String(info.date.getDate()).padStart(2,'0')}`
-          // 공휴일 날짜 글자 빨간색
-          if (holidayDates?.has(dateStr)) {
-            const numEl = info.el.querySelector('.fc-daygrid-day-number') as HTMLElement
-            if (numEl) numEl.style.color = '#ef4444'
-          }
           info.el.addEventListener('mouseenter', () => onCellHover(dateStr, info.el.getBoundingClientRect()))
           info.el.addEventListener('mouseleave', () => onCellHover('', null))
         }}

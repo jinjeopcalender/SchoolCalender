@@ -412,23 +412,34 @@ export default function Home() {
       const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
       setEvents([...adminEvents, ...filteredHolidays])
     } else {
-      const { data: cal } = await supabase
-        .from('user_calendar').select('id, assigned_date, end_date, is_personal, title, content, color, posts(id,title,content,category,created_by,grade)').eq('user_id', uid)
-      setEvents((cal||[]).map((item:any) => {
+      // 개인 일정과 일반 일정 분리 조회
+      const { data: personalCal } = await supabase
+        .from('user_calendar').select('id, assigned_date, end_date, title, content, color')
+        .eq('user_id', uid).eq('is_personal', true)
+
+      const { data: normalCal } = await supabase
+        .from('user_calendar').select('id, assigned_date, end_date, posts(id,title,content,category,created_by,grade)')
+        .eq('user_id', uid).eq('is_personal', false)
+
+      const personalEvents = (personalCal||[]).map((item: any) => {
         const endDateExclusive = item.end_date
           ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
           : undefined
-        if (item.is_personal) {
-          return {
-            id: item.id, title: item.title, content: item.content,
-            category: '개인', date: item.assigned_date,
-            is_personal: true, cal_id: item.id,
-            start: item.assigned_date, end: endDateExclusive,
-            color: item.color || '#f59e0b',
-            backgroundColor: item.color || '#f59e0b',
-            borderColor: item.color || '#f59e0b',
-          }
+        return {
+          id: item.id, title: item.title, content: item.content,
+          category: '개인', date: item.assigned_date,
+          is_personal: true, cal_id: item.id,
+          start: item.assigned_date, end: endDateExclusive,
+          color: item.color || '#f59e0b',
+          backgroundColor: item.color || '#f59e0b',
+          borderColor: item.color || '#f59e0b',
         }
+      })
+
+      const normalEvents = (normalCal||[]).filter((item: any) => item.posts).map((item: any) => {
+        const endDateExclusive = item.end_date
+          ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+          : undefined
         return {
           id: item.posts.id, title: item.posts.title, content: item.posts.content,
           category: item.posts.category, date: item.assigned_date,
@@ -439,7 +450,9 @@ export default function Home() {
           backgroundColor: getCategoryColor(item.posts.category),
           borderColor: getCategoryColor(item.posts.category),
         }
-      }))
+      })
+
+      setEvents([...personalEvents, ...normalEvents])
     }
 
     // 공휴일 추가 (DB 휴일과 중복 제거)

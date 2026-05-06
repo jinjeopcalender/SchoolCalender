@@ -46,8 +46,8 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
     onCellHover('', null)
   }
 
-  // 공휴일 날짜 글자 빨간색 적용 (events 로드 후에도 반영)
-  useEffect(() => {
+  // 공휴일 날짜 글자 빨간색 적용
+  const applyHolidayColors = () => {
     if (!holidayDates || holidayDates.size === 0) return
     const cells = document.querySelectorAll('.fc-daygrid-day')
     cells.forEach(cell => {
@@ -57,7 +57,14 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
         if (numEl) numEl.style.color = '#ef4444'
       }
     })
-  }, [holidayDates])
+  }
+
+  useEffect(() => {
+    // FullCalendar DOM 렌더 완료 후 적용
+    const t1 = setTimeout(applyHolidayColors, 50)
+    const t2 = setTimeout(applyHolidayColors, 200)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [holidayDates, currentMonth, currentYear])
 
   const today = new Date()
 

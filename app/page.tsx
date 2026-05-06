@@ -413,9 +413,10 @@ export default function Home() {
       setEvents([...adminEvents, ...filteredHolidays])
     } else {
       // 개인 일정과 일반 일정 분리 조회
-      const { data: personalCal } = await supabase
+      const { data: personalCal, error: personalError } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, title, content, color')
         .eq('user_id', uid).eq('is_personal', true)
+      console.log('personalCal:', personalCal, 'error:', personalError)
 
       const { data: normalCal } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, posts(id,title,content,category,created_by,grade)')

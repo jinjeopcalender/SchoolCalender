@@ -483,6 +483,7 @@ export default function Home() {
     supabase.channel('user-calendar-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'user_calendar', filter:`user_id=eq.${uid}` },
         async (payload) => {
+          if (!payload.new.post_id) return  // 개인 일정은 무시
           const { data: p } = await supabase.from('posts')
             .select('id,title,content,category,created_by').eq('id', payload.new.post_id).single()
           if (p) {
@@ -877,7 +878,32 @@ export default function Home() {
   }
 
   const login  = async () => supabase.auth.signInWithOAuth({ provider:'google', options:{ skipBrowserRedirect:false, queryParams:{ prompt:'select_account' } } })
-  const logout = async () => { supabase.removeAllChannels(); await supabase.auth.signOut(); setUser(null); setUserGrade(null) }
+  const logout = async () => {
+    supabase.removeAllChannels()
+    await supabase.auth.signOut()
+    setUser(null); setUserGrade(null); setIsAdmin(false); setIsTeacher(false)
+    setEvents([]); setNotifications([]); setPendingPosts([]); setPendingMessages([])
+    // 비로그인 공개 데이터 다시 로드
+    await loadTeachers()
+    await loadNotices()
+    const { data: schoolPosts } = await supabase.from('posts')
+      .select('id, title, content, category, default_date, end_date')
+      .eq('status', 'approved').in('category', ['학교행사', '휴일'])
+    const schoolEvents = (schoolPosts||[]).map((p: any) => {
+      const endExclusive = p.end_date
+        ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+        : undefined
+      return {
+        id: p.id, title: p.title, content: p.content, category: p.category,
+        date: p.default_date, start: p.default_date, end: endExclusive,
+        color: getCategoryColor(p.category), backgroundColor: getCategoryColor(p.category), borderColor: getCategoryColor(p.category),
+      }
+    })
+    const year = new Date().getFullYear()
+    const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
+    const existingDates = new Set(schoolEvents.filter((e: any) => e.category === '휴일').map((e: any) => e.date))
+    setEvents([...schoolEvents, ...holidays.filter(h => !existingDates.has(h.date))])
+  }
 
   const closeDatePopup = () => {
     setShowDatePopup(false); setSelectedDate(null); setSelectedDateEvents([])
@@ -1143,6 +1169,10 @@ export default function Home() {
     </div>
   ) : null
 
+  const holidayDates = new Set(
+    events.filter(e => e.category === '휴일' || e.isHoliday).map(e => e.date)
+  )
+
   const toastColors = {
     success: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900',
     error:   'bg-red-500 text-white',
@@ -1395,6 +1425,7 @@ export default function Home() {
                       setShowDatePopup(true)
                     }}
                     onCellHover={handleCellHover}
+                    holidayDates={holidayDates}
                     pendingPostId={null}
                   />
                 </div>
@@ -1475,7 +1506,7 @@ export default function Home() {
           </div>
 
           {/* 날짜 클릭 팝업 (비로그인) */}
-          {showDatePopup && selectedDate && (
+          {!user && showDatePopup && selectedDate && (
             <div className={overlayClass}>
               <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
                 <h3 className="font-bold text-base mb-3">📅 {selectedDate}</h3>
@@ -1645,7 +1676,7 @@ export default function Home() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">기타</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">🔒 개인</span>
                   </div>
-                  <Calendar events={events} onDateClick={handleDateClick} onCellHover={handleCellHover} pendingPostId={pendingPostId} />
+                  <Calendar events={events} onDateClick={handleDateClick} onCellHover={handleCellHover} holidayDates={holidayDates} pendingPostId={pendingPostId} />
                 </div>
               )}
 

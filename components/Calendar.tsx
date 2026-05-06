@@ -10,11 +10,12 @@ interface CalendarProps {
   onDateClick: (date: string) => void
   onCellHover: (dateStr: string, rect: DOMRect | null) => void
   pendingPostId?: string | null
+  holidayDates?: Set<string>
 }
 
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-export default function Calendar({ events, onDateClick, onCellHover, pendingPostId }: CalendarProps) {
+export default function Calendar({ events, onDateClick, onCellHover, pendingPostId, holidayDates }: CalendarProps) {
   const calendarRef = useRef<any>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
@@ -129,6 +130,11 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
         }}
         dayCellDidMount={(info) => {
           const dateStr = `${info.date.getFullYear()}-${String(info.date.getMonth()+1).padStart(2,'0')}-${String(info.date.getDate()).padStart(2,'0')}`
+          // 공휴일 날짜 글자 빨간색
+          if (holidayDates?.has(dateStr)) {
+            const numEl = info.el.querySelector('.fc-daygrid-day-number') as HTMLElement
+            if (numEl) numEl.style.color = '#ef4444'
+          }
           info.el.addEventListener('mouseenter', () => onCellHover(dateStr, info.el.getBoundingClientRect()))
           info.el.addEventListener('mouseleave', () => onCellHover('', null))
         }}

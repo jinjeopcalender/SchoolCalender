@@ -291,7 +291,7 @@ export default function Home() {
         const { data: schoolPosts } = await supabase.from('posts')
           .select('id, title, content, category, default_date, end_date')
           .eq('status', 'approved').in('category', ['학교행사', '휴일'])
-        setEvents((schoolPosts||[]).map(p => {
+        const schoolEvents = (schoolPosts||[]).map(p => {
           const endExclusive = p.end_date
             ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
             : undefined
@@ -302,7 +302,16 @@ export default function Home() {
             backgroundColor: getCategoryColor(p.category),
             borderColor: getCategoryColor(p.category),
           }
-        }))
+        })
+        const year = new Date().getFullYear()
+        const holidays = [
+          ...loadKoreanHolidays(year),
+          ...loadKoreanHolidays(year + 1),
+        ]
+        // 이미 DB에 같은 날짜 휴일이 있으면 중복 제거
+        const existingDates = new Set(schoolEvents.filter(e => e.category === '휴일').map(e => e.date))
+        const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
+        setEvents([...schoolEvents, ...filteredHolidays])
         return
       }
 
@@ -379,7 +388,7 @@ export default function Home() {
         .select('post_id, assigned_date, end_date').eq('user_id', uid)
       const calMap = new Map((adminCal||[]).map(c => [c.post_id, c]))
 
-      setEvents((allPosts||[]).map(p => {
+      const adminEvents = (allPosts||[]).map(p => {
         const cal = calMap.get(p.id)
         const assignedDate = cal?.assigned_date ?? p.default_date
         const endDate = cal?.end_date ?? p.end_date
@@ -396,7 +405,12 @@ export default function Home() {
           backgroundColor: getCategoryColor(p.category),
           borderColor: getCategoryColor(p.category),
         }
-      }))
+      })
+      const year = new Date().getFullYear()
+      const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
+      const existingDates = new Set(adminEvents.filter(e => e.category === '휴일').map(e => e.date))
+      const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
+      setEvents([...adminEvents, ...filteredHolidays])
     } else {
       const { data: cal } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, is_personal, title, content, color, posts(id,title,content,category,created_by,grade)').eq('user_id', uid)
@@ -427,6 +441,15 @@ export default function Home() {
         }
       }))
     }
+
+    // 공휴일 추가 (DB 휴일과 중복 제거)
+    const year = new Date().getFullYear()
+    const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
+    setEvents(prev => {
+      const existingDates = new Set(prev.filter(e => e.category === '휴일').map(e => e.date))
+      const filtered = holidays.filter(h => !existingDates.has(h.date))
+      return [...prev, ...filtered]
+    })
 
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,end_date,category)')
@@ -498,6 +521,34 @@ export default function Home() {
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'posts' },
           (payload) => { if (payload.new.status!=='pending') setPendingPosts(prev=>prev.filter(p=>p.id!==payload.new.id)) })
         .subscribe()
+    }
+  }
+
+  const loadKoreanHolidays = (year: number) => {
+    try {
+      // date-holidays는 dynamic import 필요
+      const Holidays = require('date-holidays')
+      const hd = new Holidays('KR')
+      const holidays = hd.getHolidays(year)
+      return holidays
+        .filter((h: any) => h.type === 'public')
+        .map((h: any) => {
+          const dateStr = h.date.split(' ')[0]
+          return {
+            id: `holiday-${dateStr}`,
+            title: h.name,
+            content: '',
+            category: '휴일',
+            date: dateStr,
+            start: dateStr,
+            color: getCategoryColor('휴일'),
+            backgroundColor: getCategoryColor('휴일'),
+            borderColor: getCategoryColor('휴일'),
+            isHoliday: true,
+          }
+        })
+    } catch {
+      return []
     }
   }
 

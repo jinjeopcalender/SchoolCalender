@@ -150,18 +150,13 @@ export default function Home() {
       position: 'center',
     },
     {
-      title: '📅 캘린더',
-      desc: '추가된 일정은 다른 친구와 공유될 수 있어요. 개인적인 일은 개인 일정으로, 수행평가는 공유 일정으로 추가해주세요!',
-      position: 'center',
-    },
-    {
       title: '🔔 알림',
-      desc: '선생님이나 관리자가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
+      desc: '선생님이나 관리자, 친구가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
       position: 'top',
     },
     {
       title: '💬 메시지',
-      desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 관리자 검토 후 전달돼요.',
+      desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 선생님이 로그인해야 보낼 수 있어요. ',
       position: 'top',
     },
     {
@@ -188,6 +183,28 @@ export default function Home() {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ msg, type })
     toastTimer.current = setTimeout(() => setToast(null), 3000)
+  }
+
+  // 캘린더 hover 툴팁
+  const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; items: any[] } | null>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleCellHover = (dateStr: string, rect: DOMRect | null) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    if (!dateStr || !rect) { hoverTimer.current = setTimeout(() => setHoverTooltip(null), 150); return }
+    const items = events.filter(ev => {
+      const start = ev.start || ev.date
+      if (!start) return false
+      if (ev.end) {
+        const endInclusive = new Date(ev.end)
+        endInclusive.setDate(endInclusive.getDate() - 1)
+        const endStr = endInclusive.toISOString().split('T')[0]
+        return dateStr >= start && dateStr <= endStr
+      }
+      return start === dateStr
+    })
+    if (items.length === 0) { setHoverTooltip(null); return }
+    setHoverTooltip({ x: rect.left, y: rect.top, items })
   }
 
   // 선생님 관리
@@ -1044,6 +1061,37 @@ export default function Home() {
   const sheetClass   = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
   const LOGIN_REQUIRED = "로그인 후 이용할 수 있어요"
 
+  const CATEGORY_BADGE: Record<string,string> = {
+    '수행평가':'bg-blue-100 text-blue-700','학교행사':'bg-green-100 text-green-700',
+    '휴일':'bg-red-100 text-red-600','기타':'bg-purple-100 text-purple-700','개인':'bg-yellow-100 text-yellow-700',
+  }
+
+  const HoverTooltipUI = hoverTooltip ? (
+    <div className="fixed z-[300] pointer-events-none animate-fade-in"
+      style={{
+        left: Math.min(hoverTooltip.x + 4, (typeof window !== 'undefined' ? window.innerWidth : 600) - 232),
+        top: hoverTooltip.y,
+        transform: 'translateY(-100%) translateY(-8px)',
+      }}>
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-56 flex flex-col gap-2">
+        {hoverTooltip.items.map((ev, i) => (
+          <div key={i} className={i > 0 ? 'pt-2 border-t border-gray-100 dark:border-gray-800' : ''}>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_BADGE[ev.category] ?? 'bg-gray-100 text-gray-600'}`}>
+              {ev.category}
+            </span>
+            <div className="flex items-center gap-1 flex-wrap mt-0.5">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {(ev.title||'').replace(/^\[\d학년\] /,'')}
+              </p>
+              {ev.grade && <span className="text-xs text-gray-400">({ev.grade}학년)</span>}
+            </div>
+            {ev.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{ev.content}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null
+
   const toastColors = {
     success: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900',
     error:   'bg-red-500 text-white',
@@ -1136,6 +1184,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {ToastUI}
+      {HoverTooltipUI}
 
       {/* 튜토리얼 오버레이 */}
       {showTutorial && user && (
@@ -1294,6 +1343,7 @@ export default function Home() {
                       setSelectedDateEvents(dayEvents)
                       setShowDatePopup(true)
                     }}
+                    onCellHover={handleCellHover}
                     pendingPostId={null}
                   />
                 </div>
@@ -1544,7 +1594,7 @@ export default function Home() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">기타</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">🔒 개인</span>
                   </div>
-                  <Calendar events={events} onDateClick={handleDateClick} pendingPostId={pendingPostId} />
+                  <Calendar events={events} onDateClick={handleDateClick} onCellHover={handleCellHover} pendingPostId={pendingPostId} />
                 </div>
               )}
 
@@ -2080,17 +2130,16 @@ export default function Home() {
             {showAddForm ? (
               <>
                 {/* 개인 일정 토글 */}
-                <div className="flex items-center gap-3 mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
+                <label className="flex items-center gap-3 mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl cursor-pointer select-none">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">🔒 개인 일정</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">나만 볼 수 있어요</p>
                   </div>
-                  <div
-                    onClick={() => setPopupIsPersonal(p => !p)}
-                    className={`shrink-0 w-11 h-6 rounded-full transition-colors cursor-pointer relative ${popupIsPersonal ? 'bg-yellow-400' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${popupIsPersonal ? 'left-6' : 'left-1'}`} />
+                  <input type="checkbox" className="hidden" checked={popupIsPersonal} onChange={e => setPopupIsPersonal(e.target.checked)} />
+                  <div className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${popupIsPersonal ? 'bg-yellow-400' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200 ${popupIsPersonal ? 'left-6' : 'left-1'}`} />
                   </div>
-                </div>
+                </label>
 
                 {popupIsPersonal ? (
                   /* 개인 일정 색상 선택 */

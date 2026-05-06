@@ -3,62 +3,22 @@
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 interface CalendarProps {
   events: any[]
   onDateClick: (date: string) => void
+  onCellHover: (dateStr: string, rect: DOMRect | null) => void
   pendingPostId?: string | null
 }
 
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-const CATEGORY_COLORS: Record<string, string> = {
-  '수행평가': 'bg-blue-100 text-blue-700',
-  '학교행사': 'bg-green-100 text-green-700',
-  '휴일':     'bg-red-100 text-red-600',
-  '기타':     'bg-purple-100 text-purple-700',
-  '개인':     'bg-yellow-100 text-yellow-700',
-}
-
-export default function Calendar({ events, onDateClick, pendingPostId }: CalendarProps) {
+export default function Calendar({ events, onDateClick, onCellHover, pendingPostId }: CalendarProps) {
   const calendarRef = useRef<any>(null)
-  const eventsRef   = useRef(events)           // ← 항상 최신 events 참조
   const [showPicker, setShowPicker] = useState(false)
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; items: any[] } | null>(null)
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // events 바뀔 때마다 ref 동기화
-  useEffect(() => { eventsRef.current = events }, [events])
-
-  const getEventsForDate = (dateStr: string) => {
-    return eventsRef.current.filter(ev => {
-      const start = ev.start || ev.date
-      if (!start) return false
-      if (ev.end) {
-        const endInclusive = new Date(ev.end)
-        endInclusive.setDate(endInclusive.getDate() - 1)
-        const endStr = endInclusive.toISOString().split('T')[0]
-        return dateStr >= start && dateStr <= endStr
-      }
-      return start === dateStr
-    })
-  }
-
-  const showTooltipForDate = (dateStr: string, el: Element) => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    const items = getEventsForDate(dateStr)
-    if (items.length === 0) { setTooltip(null); return }
-    const rect = el.getBoundingClientRect()
-    setTooltip({ x: rect.left, y: rect.top, items })
-  }
-
-  const hideTooltip = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => setTooltip(null), 150)
-  }
 
   const goToMonth = (year: number, month: number) => {
     const api = calendarRef.current?.getApi()
@@ -72,7 +32,8 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
     if (!api) return
     api.prev()
     const d = api.getDate()
-    setCurrentYear(d.getFullYear()); setCurrentMonth(d.getMonth()); setTooltip(null)
+    setCurrentYear(d.getFullYear()); setCurrentMonth(d.getMonth())
+    onCellHover('', null)
   }
 
   const handleNext = () => {
@@ -80,7 +41,8 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
     if (!api) return
     api.next()
     const d = api.getDate()
-    setCurrentYear(d.getFullYear()); setCurrentMonth(d.getMonth()); setTooltip(null)
+    setCurrentYear(d.getFullYear()); setCurrentMonth(d.getMonth())
+    onCellHover('', null)
   }
 
   const today = new Date()
@@ -122,8 +84,8 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
                   <button key={i} onClick={() => goToMonth(currentYear, i)}
                     className={`py-2 rounded-xl text-xs font-medium transition-colors ${
                       isToday && isSelected ? 'bg-blue-500 text-white' :
-                      isToday   ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' :
-                      isSelected? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold' :
+                      isToday    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' :
+                      isSelected ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold' :
                       'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
                     }`}>{m}</button>
                 )
@@ -155,49 +117,20 @@ export default function Calendar({ events, onDateClick, pendingPostId }: Calenda
         @media (max-width: 480px) { .fc .fc-daygrid-day { min-height: 48px !important; } }
       `}</style>
 
-      {/* 툴팁 */}
-      {tooltip && tooltip.items.length > 0 && (
-        <div className="fixed z-[300] pointer-events-none animate-fade-in"
-          style={{
-            left: Math.min(tooltip.x + 4, window.innerWidth - 232),
-            top:  tooltip.y,
-            transform: 'translateY(-100%) translateY(-8px)',
-          }}>
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-56 flex flex-col gap-2">
-            {tooltip.items.map((ev, i) => (
-              <div key={i} className={i > 0 ? 'pt-2 border-t border-gray-100 dark:border-gray-800' : ''}>
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {ev.category}
-                </span>
-                <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {(ev.title || '').replace(/^\[\d학년\] /, '')}
-                  </p>
-                  {ev.grade && <span className="text-xs text-gray-400">({ev.grade}학년)</span>}
-                </div>
-                {ev.content && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{ev.content}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         events={events}
-        dateClick={(info) => { setTooltip(null); onDateClick(info.dateStr) }}
+        dateClick={(info) => { onCellHover('', null); onDateClick(info.dateStr) }}
         eventClick={(info) => {
-          setTooltip(null)
+          onCellHover('', null)
           onDateClick(info.event.startStr.split('T')[0])
         }}
         dayCellDidMount={(info) => {
-          const dateStr = info.date.toISOString().split('T')[0]
-          info.el.addEventListener('mouseenter', () => showTooltipForDate(dateStr, info.el))
-          info.el.addEventListener('mouseleave', hideTooltip)
+          const dateStr = `${info.date.getFullYear()}-${String(info.date.getMonth()+1).padStart(2,'0')}-${String(info.date.getDate()).padStart(2,'0')}`
+          info.el.addEventListener('mouseenter', () => onCellHover(dateStr, info.el.getBoundingClientRect()))
+          info.el.addEventListener('mouseleave', () => onCellHover('', null))
         }}
         headerToolbar={false}
         dayHeaderFormat={{ weekday: 'narrow' }}

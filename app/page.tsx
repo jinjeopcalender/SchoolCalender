@@ -383,10 +383,10 @@ export default function Home() {
       const { data: allPosts } = await supabase.from('posts')
         .select('id, title, content, category, grade, default_date, end_date, created_by')
         .eq('status', 'approved')
-      // user_calendar에서 관리자 본인 날짜 오버라이드 가져오기
+      // user_calendar에서 관리자 본인 날짜 오버라이드 + 개인 일정 가져오기
       const { data: adminCal } = await supabase.from('user_calendar')
-        .select('post_id, assigned_date, end_date').eq('user_id', uid)
-      const calMap = new Map((adminCal||[]).map(c => [c.post_id, c]))
+        .select('id, post_id, assigned_date, end_date, is_personal, title, content, color').eq('user_id', uid)
+      const calMap = new Map((adminCal||[]).filter(c => !c.is_personal).map(c => [c.post_id, c]))
 
       const adminEvents = (allPosts||[]).map(p => {
         const cal = calMap.get(p.id)
@@ -406,17 +406,33 @@ export default function Home() {
           borderColor: getCategoryColor(p.category),
         }
       })
+
+      // 관리자 개인 일정
+      const adminPersonalEvents = (adminCal||[]).filter(c => c.is_personal).map(c => {
+        const endExclusive = c.end_date
+          ? (() => { const d = new Date(c.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+          : undefined
+        return {
+          id: c.id, title: c.title, content: c.content,
+          category: '개인', date: c.assigned_date,
+          is_personal: true, cal_id: c.id,
+          start: c.assigned_date, end: endExclusive,
+          color: c.color || '#f59e0b',
+          backgroundColor: c.color || '#f59e0b',
+          borderColor: c.color || '#f59e0b',
+        }
+      })
+
       const year = new Date().getFullYear()
       const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
       const existingDates = new Set(adminEvents.filter(e => e.category === '휴일').map(e => e.date))
       const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
-      setEvents([...adminEvents, ...filteredHolidays])
+      setEvents([...adminEvents, ...adminPersonalEvents, ...filteredHolidays])
     } else {
       // 개인 일정과 일반 일정 분리 조회
-      const { data: personalCal, error: personalError } = await supabase
+      const { data: personalCal } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, title, content, color')
         .eq('user_id', uid).eq('is_personal', true)
-      console.log('personalCal:', personalCal, 'error:', personalError)
 
       const { data: normalCal } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, posts(id,title,content,category,created_by,grade)')

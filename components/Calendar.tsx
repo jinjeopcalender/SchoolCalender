@@ -146,9 +146,12 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
         dateClick={(info) => { onCellHover('', null); onDateClick(info.dateStr) }}
         eventClick={(info) => {
           onCellHover('', null)
-          // 마우스 위치로 실제 클릭한 날짜 셀 찾기 (기간 이벤트 대응)
+          // 이벤트 요소를 잠깐 숨기고 뒤의 날짜 셀 찾기
+          const evEl = info.el as HTMLElement
           const e = info.jsEvent as MouseEvent
+          evEl.style.pointerEvents = 'none'
           const el = document.elementFromPoint(e.clientX, e.clientY)
+          evEl.style.pointerEvents = ''
           const cell = el?.closest('[data-date]')
           const dateAttr = cell?.getAttribute('data-date')
           const dateStr = dateAttr || info.event.startStr.split('T')[0]

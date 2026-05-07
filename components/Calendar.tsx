@@ -146,9 +146,11 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
         dateClick={(info) => { onCellHover('', null); onDateClick(info.dateStr) }}
         eventClick={(info) => {
           onCellHover('', null)
-          // 클릭한 실제 날짜를 DOM에서 가져옴 (기간 이벤트 중간 날짜 클릭 대응)
-          const clickedCell = info.el.closest('.fc-daygrid-day')
-          const dateAttr = clickedCell?.getAttribute('data-date')
+          // 마우스 위치로 실제 클릭한 날짜 셀 찾기 (기간 이벤트 대응)
+          const e = info.jsEvent as MouseEvent
+          const el = document.elementFromPoint(e.clientX, e.clientY)
+          const cell = el?.closest('[data-date]')
+          const dateAttr = cell?.getAttribute('data-date')
           const dateStr = dateAttr || info.event.startStr.split('T')[0]
           onDateClick(dateStr)
         }}

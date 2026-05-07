@@ -162,6 +162,18 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
           info.el.addEventListener('mouseenter', () => onCellHover(dateStr, info.el.getBoundingClientRect()))
           info.el.addEventListener('mouseleave', () => onCellHover('', null))
         }}
+        eventDidMount={(info) => {
+          info.el.addEventListener('mouseenter', (e: any) => {
+            // 이벤트 요소 위치로 날짜 셀 찾기
+            info.el.style.pointerEvents = 'none'
+            const under = document.elementFromPoint(e.clientX, e.clientY)
+            info.el.style.pointerEvents = ''
+            const cell = under?.closest('[data-date]')
+            const dateAttr = cell?.getAttribute('data-date')
+            if (dateAttr) onCellHover(dateAttr, cell!.getBoundingClientRect())
+          })
+          info.el.addEventListener('mouseleave', () => onCellHover('', null))
+        }}
         headerToolbar={false}
         dayHeaderFormat={{ weekday: 'narrow' }}
         height="auto"

@@ -146,7 +146,11 @@ export default function Calendar({ events, onDateClick, onCellHover, pendingPost
         dateClick={(info) => { onCellHover('', null); onDateClick(info.dateStr) }}
         eventClick={(info) => {
           onCellHover('', null)
-          onDateClick(info.event.startStr.split('T')[0])
+          // 클릭한 실제 날짜를 DOM에서 가져옴 (기간 이벤트 중간 날짜 클릭 대응)
+          const clickedCell = info.el.closest('.fc-daygrid-day')
+          const dateAttr = clickedCell?.getAttribute('data-date')
+          const dateStr = dateAttr || info.event.startStr.split('T')[0]
+          onDateClick(dateStr)
         }}
         dayCellDidMount={(info) => {
           const dateStr = `${info.date.getFullYear()}-${String(info.date.getMonth()+1).padStart(2,'0')}-${String(info.date.getDate()).padStart(2,'0')}`

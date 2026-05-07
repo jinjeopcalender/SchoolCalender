@@ -188,11 +188,13 @@ export default function Home() {
   // 캘린더 hover 툴팁
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; items: any[] } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const eventsRef = useRef<any[]>([])
+  useEffect(() => { eventsRef.current = events }, [events])
 
   const handleCellHover = (dateStr: string, rect: DOMRect | null) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
     if (!dateStr || !rect) { hoverTimer.current = setTimeout(() => setHoverTooltip(null), 150); return }
-    const items = events.filter(ev => {
+    const items = eventsRef.current.filter(ev => {
       const start = ev.start || ev.date
       if (!start) return false
       if (ev.end) {
@@ -940,9 +942,22 @@ export default function Home() {
     setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupCategory('수행평가'); setPopupGrade(null); setPopupDateType('single'); setPopupEndDate(''); setPopupIsPersonal(false); setPopupColor('#f59e0b')
   }
 
+  // 날짜가 이벤트 범위 안에 있는지 확인 (기간 일정 지원)
+  const isEventOnDate = (ev: any, date: string) => {
+    const start = ev.start || ev.date
+    if (!start) return false
+    if (ev.end) {
+      const endInclusive = new Date(ev.end)
+      endInclusive.setDate(endInclusive.getDate() - 1)
+      const endStr = endInclusive.toISOString().split('T')[0]
+      return date >= start && date <= endStr
+    }
+    return start === date
+  }
+
   const handleDateClick = (date: string) => {
     if (pendingPostId) { setPickerDate(date); return }
-    setSelectedDate(date); setSelectedDateEvents(events.filter(e => e.date === date))
+    setSelectedDate(date); setSelectedDateEvents(events.filter(e => isEventOnDate(e, date)))
     setShowDatePopup(true); setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupCategory('수행평가'); setPopupGrade(null)
   }
 
@@ -1449,7 +1464,7 @@ export default function Home() {
                   <Calendar
                     events={events}
                     onDateClick={(date) => {
-                      const dayEvents = events.filter(e => e.date === date)
+                      const dayEvents = events.filter(e => isEventOnDate(e, date))
                       setSelectedDate(date)
                       setSelectedDateEvents(dayEvents)
                       setShowDatePopup(true)

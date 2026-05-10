@@ -499,7 +499,6 @@ export default function Home() {
             .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
           if (n) {
             setNotifications(prev => prev.some(x => x.id === n.id) ? prev : [n, ...prev])
-            sendPush(uid, '📅 새 일정 알림', n.posts?.title ?? '새 일정이 추가됐어요')
           }
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },

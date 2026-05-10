@@ -227,6 +227,9 @@ export default function Home() {
   // 푸시 알림
   const [pushEnabled, setPushEnabled] = useState(false)
 
+  // 설정
+  const [showSettings, setShowSettings] = useState(false)
+
   const toggleSubject = (s: string) =>
     setOpenSubjects(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n })
 
@@ -237,6 +240,7 @@ export default function Home() {
     const handle = () => {
       if (showBoardPost) { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null); return }
       if (showBoardForm) { setShowBoardForm(false); setBoardTitle(''); setBoardContent(''); return }
+      if (showSettings)  { setShowSettings(false); return }
       if (showNoticePopup) { setShowNoticePopup(false); return }
       if (showNoticeManager) { setShowNoticeManager(false); return }
       if (showNoticeForm) { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
@@ -260,6 +264,7 @@ export default function Home() {
 
   useEffect(() => { if (showBoardPost) pushHistory() }, [showBoardPost])
   useEffect(() => { if (showBoardForm) pushHistory() }, [showBoardForm])
+  useEffect(() => { if (showSettings)  pushHistory() }, [showSettings])
   useEffect(() => { if (showNotifications) pushHistory() }, [showNotifications])
   useEffect(() => { if (showDatePopup) pushHistory() }, [showDatePopup])
   useEffect(() => { if (showAddForm) pushHistory() }, [showAddForm])
@@ -1726,11 +1731,11 @@ export default function Home() {
                   </button>
                 )}
                 <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">로그아웃</button>
+                <button onClick={() => setShowSettings(true)}
+                  className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
+                  ⚙️<span className="hidden md:inline ml-1 text-xs">설정</span>
+                </button>
               </div>
-              <button onClick={togglePush}
-                className={`btn mt-2 w-full py-2 rounded-lg text-sm flex items-center justify-center gap-1.5 ${pushEnabled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'}`}>
-                <span className="text-xs">푸시 알림: {pushEnabled ? 'ON' : 'OFF'}</span>
-              </button>
             </div>
 
             {/* PC 사이드 탭 */}
@@ -1992,6 +1997,38 @@ export default function Home() {
       )}
 
       {/* ──────────── 팝업들 ──────────── */}
+
+      {/* 설정 팝업 */}
+      {showSettings && (
+        <div className={overlayClass}>
+          <div className={sheetClass}>
+            <h3 className="font-bold text-base mb-5">⚙️ 설정</h3>
+
+            {/* 푸시 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
+              <div>
+                <p className="text-sm font-medium">🔔 푸시 알림</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">새 일정, 댓글, 답장 알림을 받아요</p>
+              </div>
+              <button onClick={togglePush}
+                className={`btn relative w-12 h-6 rounded-full transition-colors duration-200 ${pushEnabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200 ${pushEnabled ? 'left-7' : 'left-1'}`} />
+              </button>
+            </div>
+
+            {/* 로그아웃 */}
+            <button onClick={() => { setShowSettings(false); logout() }}
+              className="btn mt-4 w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl text-sm font-medium">
+              로그아웃
+            </button>
+
+            <button onClick={() => setShowSettings(false)}
+              className="mt-2 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 게시판 글 상세 팝업 */}
       {showBoardPost && selectedPost && (

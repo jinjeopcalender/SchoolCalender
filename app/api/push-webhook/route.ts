@@ -41,15 +41,22 @@ async function sendPushToUser(user_id: string, title: string, body: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-
-    // Supabase Webhook payload: { type, table, record, old_record }
     const record = body.record ?? body
+    const type = record.type
+
+    // 일정 승인 알림 (DB 트리거에서 호출)
+    if (type === 'approved') {
+      const { user_id, post_title } = record
+      if (!user_id) return NextResponse.json({ ok: true })
+      await sendPushToUser(user_id, '✅ 일정 승인', `"${post_title}" 일정이 승인됐어요!`)
+      return NextResponse.json({ ok: true })
+    }
+
+    // 새 일정 알림 (notifications INSERT Webhook에서 호출)
     const user_id = record.user_id
     const post_id = record.post_id
-
     if (!user_id) return NextResponse.json({ ok: true })
 
-    // post 제목 가져오기
     let postTitle = '새 일정이 추가됐어요'
     if (post_id) {
       const { data: post } = await supabase
@@ -58,7 +65,6 @@ export async function POST(req: NextRequest) {
     }
 
     await sendPushToUser(user_id, '📅 새 일정 알림', postTitle)
-
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('Webhook push error:', e)

@@ -144,6 +144,7 @@ export default function Home() {
   const tutorialSteps = [
     { title: '📅 캘린더', desc: '날짜를 탭하면 그날의 일정을 확인하고 새 일정을 추가할 수 있어요.', position: 'center' },
     { title: '➕ 간식 얻기!', desc: '올린 일정은 관리자 승인 후 친구들에게 공유돼요. 승인이 많이 된 학생은 매달 간식을 받을 수 있어요. ', position: 'center' },
+    { title: '📰 게시판', desc: '학년 별 게시판에서 자유롭게 학습 관련 정보를 질문/공유하세요! ', position: 'top' },
     { title: '🔔 알림', desc: '선생님이나 관리자, 친구가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.', position: 'top' },
     { title: '💬 메시지', desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 선생님이 로그인해야 보낼 수 있어요. ', position: 'top' },
     { title: '🏫 선생님 위치', desc: '아래 탭에서 선생님 위치를 확인할 수 있어요. 과목별로 정리되어 있어요.', position: 'bottom' },

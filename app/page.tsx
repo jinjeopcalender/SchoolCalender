@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import Calendar from '@/components/Calendar'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
+import { registerPush, isPushEnabled, unregisterPush } from '@/lib/push'
 
 type Tab = 'calendar' | 'board' | 'teacher'
 type Category = '수행평가' | '기타'
@@ -223,6 +224,9 @@ export default function Home() {
   const [boardSubmitting,   setBoardSubmitting]   = useState(false)
   const [showPostAuthor,    setShowPostAuthor]    = useState<string | null>(null)
 
+  // 푸시 알림
+  const [pushEnabled, setPushEnabled] = useState(false)
+
   const toggleSubject = (s: string) =>
     setOpenSubjects(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n })
 
@@ -343,6 +347,9 @@ export default function Home() {
 
       // 게시판 초기 학년 설정
       if (ud?.grade) setBoardGrade(ud.grade)
+
+      // 푸시 알림 상태 확인
+      isPushEnabled().then(setPushEnabled)
     }
     init()
     return () => { supabase.removeAllChannels() }
@@ -490,7 +497,10 @@ export default function Home() {
         async (payload) => {
           const { data: n } = await supabase.from('notifications')
             .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
-          if (n) setNotifications(prev => prev.some(x=>x.id===n.id) ? prev : [n, ...prev])
+          if (n) {
+            setNotifications(prev => prev.some(x=>x.id===n.id) ? prev : [n, ...prev])
+            sendPush(uid, '📅 새 일정 알림', n.posts?.title ?? '새 일정이 추가됐어요')
+          }
         })
       .on('postgres_changes', { event:'UPDATE', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
         (payload) => {
@@ -547,8 +557,10 @@ export default function Home() {
       supabase.channel('posts-approved-channel')
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'posts' },
           (payload) => {
-            if (payload.new.created_by === uid && payload.new.status === 'approved' && payload.new.is_user_generated)
+            if (payload.new.created_by === uid && payload.new.status === 'approved' && payload.new.is_user_generated) {
               setApprovedCount(prev => prev + 1)
+              sendPush(uid, '✅ 일정 승인', `"${payload.new.title}" 일정이 승인됐어요!`)
+            }
           })
         .subscribe()
     }
@@ -852,6 +864,8 @@ export default function Home() {
     if (error) { showToast(error.message, 'error'); return }
     setMyMessages(prev => prev.map(m => m.id === replyTarget.id ? { ...m, reply: replyContent.trim(), reply_read: false } : m))
     setShowReplyForm(false); setReplyContent(''); setReplyTarget(null)
+    // 메시지 보낸 학생에게 푸시
+    sendPush(replyTarget.sender_id, '↩️ 선생님 답장', `${myTeacherRow?.name ?? '선생님'}이 답장하셨어요`)
   }
 
   const openSentMessages = async () => {
@@ -910,6 +924,10 @@ export default function Home() {
     setBoardComments(prev => [...prev, data])
     setBoardCommentInput('')
     loadBoardPosts(boardGrade)
+    // 내 글이 아닐 때만 글 작성자에게 푸시
+    if (selectedPost.user_id !== user.id) {
+      sendPush(selectedPost.user_id, '💬 새 댓글', `"${selectedPost.title}"에 댓글이 달렸어요`)
+    }
   }
 
   const deleteBoardPost = async (postId: string) => {
@@ -941,12 +959,12 @@ export default function Home() {
     return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
   }
 
-  // 비로그인용 선생님 이름 마스킹 (2글자: 성만 가림, 3글자+: 가운데 글자 가림)
+  // 비로그인용 선생님 이름 마스킹 (2글자: 첫 글자 가림, 3글자+: 가운데 글자 가림)
   const maskTeacherName = (name: string) => {
     if (name.length <= 1) return name
     if (name.length === 2) return '●' + name[1]
     const mid = Math.floor(name.length / 2)
-    return name.slice(0, mid) + '●'.repeat(name.length - mid * 2 === 0 ? 1 : name.length - mid - Math.ceil(name.length / 2) + 1) + name.slice(mid + 1)
+    return name.slice(0, mid) + '●' + name.slice(mid + 1)
   }
 
   // ── 기타 함수들 ───────────────────────────────────────────────
@@ -1005,6 +1023,34 @@ export default function Home() {
     const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
     const existingDates = new Set(schoolEvents.filter((e: any) => e.category === '휴일').map((e: any) => e.date))
     setEvents([...schoolEvents, ...holidays.filter(h => !existingDates.has(h.date))])
+  }
+
+  const sendPush = async (userId: string, title: string, body: string, url = '/') => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-push`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ user_id: userId, title, body, url }),
+      })
+    } catch (e) {
+      console.error('Push send failed:', e)
+    }
+  }
+
+  const togglePush = async () => {
+    if (!user) return
+    if (pushEnabled) {
+      await unregisterPush(user.id, supabase)
+      setPushEnabled(false)
+      showToast('푸시 알림을 껐어요')
+    } else {
+      const ok = await registerPush(user.id, supabase)
+      setPushEnabled(ok)
+      showToast(ok ? '푸시 알림을 켰어요! 🔔' : '알림 허용이 필요해요', ok ? 'success' : 'error')
+    }
   }
 
   const closeDatePopup = () => {
@@ -1518,7 +1564,6 @@ export default function Home() {
                   <Calendar
                     events={events}
                     onDateClick={(date) => {
-                      if (showDatePopup) return
                       const dayEvents = events.filter(e => isEventOnDate(e, date))
                       setSelectedDate(date)
                       setSelectedDateEvents(dayEvents)
@@ -1684,6 +1729,10 @@ export default function Home() {
                   </button>
                 )}
                 <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">로그아웃</button>
+                <button onClick={togglePush}
+                  className={`btn px-3 py-1.5 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap ${pushEnabled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'}`}>
+                  {pushEnabled ? '🔔' : '🔕'}<span className="hidden md:inline ml-1 text-xs">{pushEnabled ? '알림 ON' : '알림 OFF'}</span>
+                </button>
               </div>
             </div>
 
@@ -2430,7 +2479,7 @@ export default function Home() {
       )}
 
       {/* 날짜 클릭 팝업 */}
-      {showDatePopup && selectedDate && (
+      {user && showDatePopup && selectedDate && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
             <h3 className="font-bold text-base mb-3">📅 {selectedDate}</h3>

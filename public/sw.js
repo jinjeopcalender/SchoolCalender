@@ -5,7 +5,6 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/favicon.png',
-      badge: '/favicon.png',
       data: { url: data.url || '/' },
       vibrate: [200, 100, 200],
     })

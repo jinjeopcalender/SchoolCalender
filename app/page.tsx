@@ -6,7 +6,7 @@ import Calendar from '@/components/Calendar'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 
-type Tab = 'calendar' | 'teacher'
+type Tab = 'calendar' | 'board' | 'teacher'
 type Category = '수행평가' | '기타'
 
 const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
@@ -31,11 +31,12 @@ export default function Home() {
   const [user,             setUser]             = useState<any>(null)
   const [userGrade,        setUserGrade]        = useState<number | null>(null)
   const [isAdmin,          setIsAdmin]          = useState(false)
+  const [approvedCount,    setApprovedCount]    = useState(0)
   const [isTeacher,        setIsTeacher]        = useState(false)
-  const [myTeacherRow,     setMyTeacherRow]     = useState<any>(null) // teachers 테이블 본인 row
+  const [myTeacherRow,     setMyTeacherRow]     = useState<any>(null)
   const [showGradePicker,  setShowGradePicker]  = useState(false)
   const [showTeacherPicker,setShowTeacherPicker]= useState(false)
-  const [showTeacherAuth,  setShowTeacherAuth]  = useState(false) // 학년 선택 화면에서 선생님 선택 시 비밀번호 입력
+  const [showTeacherAuth,  setShowTeacherAuth]  = useState(false)
   const [teacherAuthPw,    setTeacherAuthPw]    = useState('')
   const [teacherAuthError, setTeacherAuthError] = useState('')
 
@@ -56,7 +57,7 @@ export default function Home() {
 
   // 학교일정
   const [showSchoolEventForm, setShowSchoolEventForm] = useState(false)
-  const [editingSchoolEvent,  setEditingSchoolEvent]  = useState<any>(null) // 수정 중인 학교일정
+  const [editingSchoolEvent,  setEditingSchoolEvent]  = useState<any>(null)
   const [schoolEventTitle,    setSchoolEventTitle]    = useState('')
   const [schoolEventContent,  setSchoolEventContent]  = useState('')
   const [schoolEventDate,     setSchoolEventDate]     = useState('')
@@ -106,14 +107,11 @@ export default function Home() {
       setShowInstallBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
-
-    // iOS 감지 - Safari에서 standalone 모드가 아닌 경우
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
     const isStandalone = (window.navigator as any).standalone === true
     if (isIOS && !isStandalone) {
       setTimeout(() => setShowIOSInstall(true), 1500)
     }
-
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -127,11 +125,11 @@ export default function Home() {
 
   // 공지
   const [notices,          setNotices]          = useState<any[]>([])
-  const [allNotices,       setAllNotices]       = useState<any[]>([]) // 관리자용 전체 목록
+  const [allNotices,       setAllNotices]       = useState<any[]>([])
   const [activeNoticeIdx,  setActiveNoticeIdx]  = useState(0)
   const [showNoticePopup,  setShowNoticePopup]  = useState(false)
   const [showNoticeForm,   setShowNoticeForm]   = useState(false)
-  const [showNoticeManager,setShowNoticeManager]= useState(false) // 공지 관리 탭
+  const [showNoticeManager,setShowNoticeManager]= useState(false)
   const [noticeTitle,      setNoticeTitle]      = useState('')
   const [noticeContent,    setNoticeContent]    = useState('')
   const [noticePreview,    setNoticePreview]    = useState(false)
@@ -144,36 +142,12 @@ export default function Home() {
   const [tutorialStep, setTutorialStep] = useState(0)
 
   const tutorialSteps = [
-    {
-      title: '📅 캘린더',
-      desc: '날짜를 탭하면 그날의 일정을 확인하고 새 일정을 추가할 수 있어요.',
-      position: 'center',
-    },
-    {
-      title: '🔔 알림',
-      desc: '선생님이나 관리자, 친구가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.',
-      position: 'top',
-    },
-    {
-      title: '💬 메시지',
-      desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 선생님이 로그인해야 보낼 수 있어요. ',
-      position: 'top',
-    },
-    {
-      title: '🏫 선생님 위치',
-      desc: '아래 탭에서 선생님 위치를 확인할 수 있어요. 과목별로 정리되어 있어요.',
-      position: 'bottom',
-    },
-    {
-      title: '➕ 일정 추가',
-      desc: '캘린더에서 날짜를 탭하고 "+ 일정 추가"를 누르면 수행평가나 기타 일정을 등록할 수 있어요. 하루 또는 기간으로 설정 가능해요.',
-      position: 'center',
-    },
-    {
-      title: '✅ 준비 완료!',
-      desc: '이제 클래스톡을 자유롭게 사용해보세요. 우측 하단 ? 버튼을 눌러 언제든 다시 볼 수 있어요.',
-      position: 'center',
-    },
+    { title: '📅 캘린더', desc: '날짜를 탭하면 그날의 일정을 확인하고 새 일정을 추가할 수 있어요.', position: 'center' },
+    { title: '➕ 간식 얻기!', desc: '올린 일정은 관리자 승인 후 친구들에게 공유돼요. 승인이 많이 된 학생은 매달 간식을 받을 수 있어요. ', position: 'center' },
+    { title: '🔔 알림', desc: '선생님이나 관리자, 친구가 일정을 올리면 알림이 와요. 알림을 눌러 일정을 수락하거나 보류할 수 있어요.', position: 'top' },
+    { title: '💬 메시지', desc: '선생님 위치 탭에서 선생님께 메시지를 보낼 수 있어요. 선생님이 로그인해야 보낼 수 있어요. ', position: 'top' },
+    { title: '🏫 선생님 위치', desc: '아래 탭에서 선생님 위치를 확인할 수 있어요. 과목별로 정리되어 있어요.', position: 'bottom' },
+    { title: '✅ 준비 완료!', desc: '이제 클래스톡을 자유롭게 사용해보세요. 우측 하단 ? 버튼을 눌러 언제든 다시 볼 수 있어요.', position: 'center' },
   ]
 
   // 토스트
@@ -222,17 +196,31 @@ export default function Home() {
   const [showMsgForm,     setShowMsgForm]     = useState(false)
   const [msgTarget,       setMsgTarget]       = useState<any>(null)
   const [msgContent,      setMsgContent]      = useState('')
-  const [pendingMessages, setPendingMessages] = useState<any[]>([]) // 관리자 승인 대기
-  const [myMessages,      setMyMessages]      = useState<any[]>([]) // 선생님 수신함
+  const [pendingMessages, setPendingMessages] = useState<any[]>([])
+  const [myMessages,      setMyMessages]      = useState<any[]>([])
   const [showMsgInbox,    setShowMsgInbox]    = useState(false)
   const [inboxTab,        setInboxTab]        = useState<'unread'|'replied'>('unread')
-  const [sentMessages,    setSentMessages]    = useState<any[]>([]) // 학생/관리자 보낸 메시지함
+  const [sentMessages,    setSentMessages]    = useState<any[]>([])
   const [showSentMessages,setShowSentMessages]= useState(false)
   const [sentPage,        setSentPage]        = useState(1)
   const PAGE_SIZE = 10
-  const [replyTarget,     setReplyTarget]     = useState<any>(null) // 답장할 메시지
+  const [replyTarget,     setReplyTarget]     = useState<any>(null)
   const [replyContent,    setReplyContent]    = useState('')
   const [showReplyForm,   setShowReplyForm]   = useState(false)
+
+  // 게시판
+  const [boardGrade,        setBoardGrade]        = useState<number>(1)
+  const [boardPosts,        setBoardPosts]        = useState<any[]>([])
+  const [boardLoading,      setBoardLoading]      = useState(false)
+  const [showBoardPost,     setShowBoardPost]     = useState(false)
+  const [selectedPost,      setSelectedPost]      = useState<any>(null)
+  const [boardComments,     setBoardComments]     = useState<any[]>([])
+  const [showBoardForm,     setShowBoardForm]     = useState(false)
+  const [boardTitle,        setBoardTitle]        = useState('')
+  const [boardContent,      setBoardContent]      = useState('')
+  const [boardCommentInput, setBoardCommentInput] = useState('')
+  const [boardSubmitting,   setBoardSubmitting]   = useState(false)
+  const [showPostAuthor,    setShowPostAuthor]    = useState<string | null>(null)
 
   const toggleSubject = (s: string) =>
     setOpenSubjects(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n })
@@ -242,9 +230,11 @@ export default function Home() {
 
   useEffect(() => {
     const handle = () => {
+      if (showBoardPost)       { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null); return }
+      if (showBoardForm)       { setShowBoardForm(false); setBoardTitle(''); setBoardContent(''); return }
       if (showNoticePopup)     { setShowNoticePopup(false); return }
-      if (showNoticeManager)    { setShowNoticeManager(false); return }
-      if (showNoticeForm)       { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
+      if (showNoticeManager)   { setShowNoticeManager(false); return }
+      if (showNoticeForm)      { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
       if (showReplyForm)       { setShowReplyForm(false); setReplyContent(''); return }
       if (showSentMessages)    { setShowSentMessages(false); return }
       if (showMsgInbox)        { setShowMsgInbox(false); return }
@@ -260,9 +250,11 @@ export default function Home() {
     }
     window.addEventListener('popstate', handle)
     return () => window.removeEventListener('popstate', handle)
-  }, [showNoticePopup, showNoticeManager, showNoticeForm, showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
+  }, [showBoardPost, showBoardForm, showNoticePopup, showNoticeManager, showNoticeForm, showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
       showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications])
 
+  useEffect(() => { if (showBoardPost)       pushHistory() }, [showBoardPost])
+  useEffect(() => { if (showBoardForm)       pushHistory() }, [showBoardForm])
   useEffect(() => { if (showNotifications)   pushHistory() }, [showNotifications])
   useEffect(() => { if (showDatePopup)        pushHistory() }, [showDatePopup])
   useEffect(() => { if (showAddForm)          pushHistory() }, [showAddForm])
@@ -274,8 +266,8 @@ export default function Home() {
   useEffect(() => { if (showMsgForm)          pushHistory() }, [showMsgForm])
   useEffect(() => { if (showMsgInbox)         pushHistory() }, [showMsgInbox])
   useEffect(() => { if (showSentMessages)     pushHistory() }, [showSentMessages])
-  useEffect(() => { if (showNoticeManager)     pushHistory() }, [showNoticeManager])
-  useEffect(() => { if (showNoticeForm)        pushHistory() }, [showNoticeForm])
+  useEffect(() => { if (showNoticeManager)    pushHistory() }, [showNoticeManager])
+  useEffect(() => { if (showNoticeForm)       pushHistory() }, [showNoticeForm])
   useEffect(() => { if (showReplyForm)        pushHistory() }, [showReplyForm])
   // ──────────────────────────────────────────────────────────────
 
@@ -283,10 +275,8 @@ export default function Home() {
     supabase.removeAllChannels()
     const init = async () => {
       const { data, error } = await supabase.auth.getUser()
-      // 인증 에러여도 비로그인으로 처리 (signOut은 실제 세션이 있을 때만)
       const cu = error ? null : data.user
 
-      // 비로그인: 공개 데이터만 로드
       if (!cu) {
         await loadTeachers()
         await loadNotices()
@@ -306,11 +296,7 @@ export default function Home() {
           }
         })
         const year = new Date().getFullYear()
-        const holidays = [
-          ...loadKoreanHolidays(year),
-          ...loadKoreanHolidays(year + 1),
-        ]
-        // 이미 DB에 같은 날짜 휴일이 있으면 중복 제거
+        const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
         const existingDates = new Set(schoolEvents.filter(e => e.category === '휴일').map(e => e.date))
         const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
         setEvents([...schoolEvents, ...filteredHolidays])
@@ -318,11 +304,9 @@ export default function Home() {
       }
 
       setUser(cu)
-
       await supabase.from('users').upsert({ id: cu.id, name: cu.user_metadata.full_name })
       const { data: ud } = await supabase.from('users').select('role, grade').eq('id', cu.id).single()
 
-      // 첫 로그인 튜토리얼
       const tutorialKey = `tutorial_done_${cu.id}`
       if (!localStorage.getItem(tutorialKey)) {
         setTimeout(() => { setShowTutorial(true); setTutorialStep(0) }, 800)
@@ -336,7 +320,6 @@ export default function Home() {
       await loadTeachers()
       await loadNotices()
 
-      // 선생님: 본인 teachers row 연결 확인
       if (teacher) {
         const { data: myT } = await supabase.from('teachers').select('*').eq('user_id', cu.id).maybeSingle()
         if (!myT) {
@@ -356,14 +339,21 @@ export default function Home() {
 
       setUserGrade(ud?.grade ?? null)
       await loadCalendarData(cu.id, ud?.grade ?? 0, admin)
+
+      // 게시판 초기 학년 설정
+      if (ud?.grade) setBoardGrade(ud.grade)
     }
     init()
     return () => { supabase.removeAllChannels() }
   }, [])
 
+  // 게시판 탭 진입 시 로드
+  useEffect(() => {
+    if (activeTab === 'board' && user) loadBoardPosts(boardGrade)
+  }, [boardGrade, activeTab])
+
   // ── 데이터 로드 ───────────────────────────────────────────────
   const loadCalendarData = async (uid: string, grade: number, admin: boolean) => {
-    // 새 유저 알림 자동 생성 (관리자 제외)
     if (!admin) {
       const { data: missed } = await supabase.from('posts').select('id')
         .eq('status','approved').eq('is_user_generated',true)
@@ -372,7 +362,6 @@ export default function Home() {
         await supabase.from('notifications')
           .upsert(missed.map(p => ({ user_id: uid, post_id: p.id, is_read: false })), { onConflict: 'user_id,post_id' })
 
-      // 새 유저 학교행사/휴일 자동 추가
       const { data: school } = await supabase.from('posts').select('id, default_date, end_date, category')
         .eq('status','approved').in('category',['학교행사','휴일']).or(`grade.is.null,grade.eq.${grade}`)
       if (school?.length)
@@ -380,12 +369,10 @@ export default function Home() {
           .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date, end_date: p.end_date ?? null })), { onConflict: 'user_id,post_id' })
     }
 
-    // 관리자: 모든 학년 승인된 일정 직접 로드
     if (admin) {
       const { data: allPosts } = await supabase.from('posts')
         .select('id, title, content, category, grade, default_date, end_date, created_by')
         .eq('status', 'approved')
-      // user_calendar에서 관리자 본인 날짜 오버라이드 + 개인 일정 가져오기
       const { data: adminCal } = await supabase.from('user_calendar')
         .select('id, post_id, assigned_date, end_date, is_personal, title, content, color').eq('user_id', uid)
       const calMap = new Map((adminCal||[]).filter(c => !c.is_personal).map(c => [c.post_id, c]))
@@ -409,7 +396,6 @@ export default function Home() {
         }
       })
 
-      // 관리자 개인 일정
       const adminPersonalEvents = (adminCal||[]).filter(c => c.is_personal).map(c => {
         const endExclusive = c.end_date
           ? (() => { const d = new Date(c.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
@@ -431,7 +417,6 @@ export default function Home() {
       const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
       setEvents([...adminEvents, ...adminPersonalEvents, ...filteredHolidays])
     } else {
-      // 개인 일정과 일반 일정 분리 조회
       const { data: personalCal } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, title, content, color')
         .eq('user_id', uid).eq('is_personal', true)
@@ -474,7 +459,6 @@ export default function Home() {
       setEvents([...personalEvents, ...normalEvents])
     }
 
-    // 공휴일 추가 (DB 휴일과 중복 제거)
     const year = new Date().getFullYear()
     const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
     setEvents(prev => {
@@ -482,6 +466,13 @@ export default function Home() {
       const filtered = holidays.filter(h => !existingDates.has(h.date))
       return [...prev, ...filtered]
     })
+
+    if (!admin) {
+      const { count } = await supabase.from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', uid).eq('status', 'approved').eq('is_user_generated', true)
+      setApprovedCount(count ?? 0)
+    }
 
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,end_date,category)')
@@ -493,7 +484,6 @@ export default function Home() {
       setPendingPosts(pending || [])
     }
 
-    // Realtime - 알림 INSERT + UPDATE
     supabase.channel('notifications-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
         async (payload) => {
@@ -511,11 +501,10 @@ export default function Home() {
         })
       .subscribe()
 
-    // Realtime - 캘린더 INSERT
     supabase.channel('user-calendar-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'user_calendar', filter:`user_id=eq.${uid}` },
         async (payload) => {
-          if (!payload.new.post_id) return  // 개인 일정은 무시
+          if (!payload.new.post_id) return
           const { data: p } = await supabase.from('posts')
             .select('id,title,content,category,created_by').eq('id', payload.new.post_id).single()
           if (p) {
@@ -534,7 +523,6 @@ export default function Home() {
         })
       .subscribe()
 
-    // Realtime - teachers 변경
     supabase.channel('teachers-channel')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'teachers' },
         (payload) => setTeachers(prev => {
@@ -554,12 +542,19 @@ export default function Home() {
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'posts' },
           (payload) => { if (payload.new.status!=='pending') setPendingPosts(prev=>prev.filter(p=>p.id!==payload.new.id)) })
         .subscribe()
+    } else {
+      supabase.channel('posts-approved-channel')
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'posts' },
+          (payload) => {
+            if (payload.new.created_by === uid && payload.new.status === 'approved' && payload.new.is_user_generated)
+              setApprovedCount(prev => prev + 1)
+          })
+        .subscribe()
     }
   }
 
   const loadKoreanHolidays = (year: number) => {
     try {
-      // date-holidays는 dynamic import 필요
       const Holidays = require('date-holidays')
       const hd = new Holidays('KR')
       const holidays = hd.getHolidays(year)
@@ -600,7 +595,6 @@ export default function Home() {
       return
     }
 
-    // localStorage로 보지 않기 필터링
     const visible = data.filter(n => {
       const key = `notice_hide_${n.id}`
       const hideUntil = localStorage.getItem(key)
@@ -633,7 +627,6 @@ export default function Home() {
     }
   }
 
-  // 텍스트 커서 위치에 삽입
   const insertToContent = (before: string, after = '') => {
     const ta = noticeTextareaRef.current
     if (!ta) return
@@ -648,7 +641,6 @@ export default function Home() {
     }, 0)
   }
 
-  // 이미지 업로드
   const uploadNoticeImage = async (file: File) => {
     setUploadingImage(true)
     const ext = file.name.split('.').pop()
@@ -744,7 +736,6 @@ export default function Home() {
       setMyMessages(enriched)
 
       supabase.channel('messages-teacher-channel')
-        // 새 메시지 승인(pending→approved) 또는 답장 읽음 처리 UPDATE
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
           async (payload) => {
             if (payload.new.teacher_id !== myT.id) return
@@ -764,7 +755,6 @@ export default function Home() {
         .subscribe()
     }
 
-    // 학생 + 관리자: 본인이 보낸 메시지(답장 포함) 로드
     if (!teacher) {
       const { data } = await supabase.from('messages')
         .select('*, teachers(name,subject)')
@@ -774,7 +764,6 @@ export default function Home() {
       setSentMessages(data || [])
 
       supabase.channel('messages-sent-channel')
-        // 새 메시지 INSERT
         .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' },
           async (payload) => {
             if (payload.new.sender_id !== uid) return
@@ -782,7 +771,6 @@ export default function Home() {
               .select('*, teachers(name,subject)').eq('id', payload.new.id).single()
             if (m) setSentMessages(prev => prev.some(x=>x.id===m.id) ? prev : [m, ...prev])
           })
-        // 상태변경 or 답장 UPDATE
         .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
           async (payload) => {
             if (payload.new.sender_id !== uid) return
@@ -835,7 +823,6 @@ export default function Home() {
 
   const submitMessage = async () => {
     if (!user || !msgTarget || !msgContent.trim()) { showToast('내용을 입력해주세요!', 'error'); return }
-    // 관리자는 바로 approved, 일반 사용자는 pending
     const status = isAdmin ? 'approved' : 'pending'
     const { error } = await supabase.from('messages').insert({
       sender_id: user.id, teacher_id: msgTarget.id, content: msgContent.trim(), status,
@@ -866,7 +853,6 @@ export default function Home() {
     setShowReplyForm(false); setReplyContent(''); setReplyTarget(null)
   }
 
-  // 보낸 메시지함 열 때 답장 읽음 처리
   const openSentMessages = async () => {
     setShowSentMessages(true)
     const unread = sentMessages.filter(m => m.reply && !m.reply_read)
@@ -875,6 +861,83 @@ export default function Home() {
       supabase.from('messages').update({ reply_read: true }).eq('id', m.id)
     ))
     setSentMessages(prev => prev.map(m => m.reply && !m.reply_read ? { ...m, reply_read: true } : m))
+  }
+
+  // ── 게시판 ────────────────────────────────────────────────────
+  const loadBoardPosts = async (grade: number) => {
+    setBoardLoading(true)
+    const { data } = await supabase.from('board_posts')
+      .select('id, grade, title, content, created_at, user_id')
+      .eq('grade', grade)
+      .order('created_at', { ascending: false })
+    setBoardPosts(data || [])
+    setBoardLoading(false)
+  }
+
+  const openBoardPost = async (post: any) => {
+    setSelectedPost(post)
+    setShowBoardPost(true)
+    setShowPostAuthor(null)
+    setBoardCommentInput('')
+    const { data } = await supabase.from('board_comments')
+      .select('id, content, created_at, user_id')
+      .eq('post_id', post.id)
+      .order('created_at', { ascending: true })
+    setBoardComments(data || [])
+  }
+
+  const submitBoardPost = async () => {
+    if (!boardTitle.trim() || !boardContent.trim()) return
+    if (!user) return
+    setBoardSubmitting(true)
+    const { data, error } = await supabase.from('board_posts').insert({
+      user_id: user.id, grade: boardGrade, title: boardTitle.trim(), content: boardContent.trim()
+    }).select().single()
+    setBoardSubmitting(false)
+    if (error) { showToast('글 작성에 실패했어요', 'error'); return }
+    showToast('글이 등록됐어요! ✍️')
+    setShowBoardForm(false); setBoardTitle(''); setBoardContent('')
+    setBoardPosts(prev => [data, ...prev])
+  }
+
+  const submitBoardComment = async () => {
+    if (!boardCommentInput.trim() || !selectedPost || !user) return
+    const { data, error } = await supabase.from('board_comments').insert({
+      user_id: user.id, post_id: selectedPost.id, content: boardCommentInput.trim()
+    }).select().single()
+    if (error) { showToast('댓글 작성에 실패했어요', 'error'); return }
+    setBoardComments(prev => [...prev, data])
+    setBoardCommentInput('')
+    loadBoardPosts(boardGrade)
+  }
+
+  const deleteBoardPost = async (postId: string) => {
+    if (!confirm('글을 삭제할까요?')) return
+    await supabase.from('board_posts').delete().eq('id', postId)
+    setBoardPosts(prev => prev.filter(p => p.id !== postId))
+    setShowBoardPost(false)
+    showToast('글이 삭제됐어요')
+  }
+
+  const deleteBoardComment = async (commentId: string) => {
+    await supabase.from('board_comments').delete().eq('id', commentId)
+    setBoardComments(prev => prev.filter(c => c.id !== commentId))
+    showToast('댓글이 삭제됐어요')
+  }
+
+  const fetchBoardAuthor = async (userId: string) => {
+    const { data } = await supabase.from('users').select('name').eq('id', userId).single()
+    setShowPostAuthor(data?.name ?? '알 수 없음')
+  }
+
+  const formatBoardDate = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const now = new Date()
+    const diff = Math.floor((now.getTime() - d.getTime()) / 1000)
+    if (diff < 60) return '방금'
+    if (diff < 3600) return `${Math.floor(diff/60)}분 전`
+    if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`
+    return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
   }
 
   // ── 기타 함수들 ───────────────────────────────────────────────
@@ -887,6 +950,7 @@ export default function Home() {
     if (!user) return
     await supabase.from('users').update({ grade }).eq('id', user.id)
     setUserGrade(grade); setShowGradePicker(false)
+    setBoardGrade(grade)
     await loadCalendarData(user.id, grade, isAdmin)
   }
 
@@ -897,7 +961,6 @@ export default function Home() {
       setTeacherAuthError('비밀번호가 맞지 않아요')
       return
     }
-    // 비밀번호 맞으면 role을 teacher로 업데이트, grade는 null
     const { error } = await supabase.from('users').update({ role: 'teacher', grade: null }).eq('id', user.id)
     if (error) { showToast(error.message, 'error'); return }
     setIsTeacher(true)
@@ -905,7 +968,6 @@ export default function Home() {
     setShowTeacherAuth(false)
     setTeacherAuthPw('')
     setTeacherAuthError('')
-    // 선생님 본인 선택 화면으로
     setShowTeacherPicker(true)
   }
 
@@ -915,7 +977,6 @@ export default function Home() {
     await supabase.auth.signOut()
     setUser(null); setUserGrade(null); setIsAdmin(false); setIsTeacher(false)
     setEvents([]); setNotifications([]); setPendingPosts([]); setPendingMessages([])
-    // 비로그인 공개 데이터 다시 로드
     await loadTeachers()
     await loadNotices()
     const { data: schoolPosts } = await supabase.from('posts')
@@ -942,7 +1003,6 @@ export default function Home() {
     setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupCategory('수행평가'); setPopupGrade(null); setPopupDateType('single'); setPopupEndDate(''); setPopupIsPersonal(false); setPopupColor('#f59e0b')
   }
 
-  // 날짜가 이벤트 범위 안에 있는지 확인 (기간 일정 지원)
   const isEventOnDate = (ev: any, date: string) => {
     const start = ev.start || ev.date
     if (!start) return false
@@ -966,7 +1026,6 @@ export default function Home() {
     const endDate = popupDateType === 'range' && popupEndDate ? popupEndDate : null
     const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
 
-    // 개인 일정
     if (popupIsPersonal) {
       const { data: calData, error } = await supabase.from('user_calendar').insert({
         user_id: user.id, post_id: null, assigned_date: selectedDate, end_date: endDate,
@@ -985,7 +1044,6 @@ export default function Home() {
     const targetGrade = (isAdmin || isTeacher) ? popupGrade : userGrade
     if (!targetGrade) { showToast('학년을 선택해주세요!', 'error'); return }
 
-    // 선생님은 승인 없이 바로 approved
     const status = isTeacher ? 'approved' : 'pending'
 
     const { data: postData, error } = await supabase.from('posts').insert({
@@ -994,10 +1052,8 @@ export default function Home() {
     }).select().single()
     if (error) { showToast(error.message, 'error'); return }
 
-    // 본인 캘린더에 추가 (선생님도 포함)
     await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate, end_date:endDate })
 
-    // 선생님이 approved로 올리면 해당 학년 학생들에게 알림 직접 생성
     if (isTeacher) {
       const { data: targetUsers } = await supabase.from('users').select('id')
         .eq('grade', targetGrade).neq('role', 'teacher').neq('role', 'admin')
@@ -1068,7 +1124,6 @@ export default function Home() {
       category: schoolEventType, grade: schoolEventGrade,
     }).eq('id', editingSchoolEvent.id)
     if (error) { showToast(error.message, 'error'); return }
-    // user_calendar도 업데이트
     await supabase.from('user_calendar').update({ assigned_date: schoolEventDate, end_date: endDate })
       .eq('post_id', editingSchoolEvent.id)
     const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
@@ -1081,7 +1136,6 @@ export default function Home() {
     setShowSchoolEventForm(false); resetSchoolEventForm()
   }
 
-  // 기간 수정 (학생/선생님용)
   const openEditEvent = (event: any) => {
     setShowDatePopup(false)
     setEditingEvent(event)
@@ -1177,7 +1231,7 @@ export default function Home() {
   const displayName         = user?.user_metadata?.full_name?.split(' ')[0] ?? ''
   const activeNotifications = notifications.filter(n=>n.status==='pending')
   const heldNotifications   = notifications.filter(n=>n.status==='held')
-  const badgeCount          = activeNotifications.length // 보류 제외
+  const badgeCount          = activeNotifications.length
 
   const overlayClass = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in"
   const sheetClass   = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
@@ -1280,7 +1334,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* 비밀번호 입력 모달 */}
         {showTeacherAuth && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in px-6">
             <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-2xl p-6 w-full max-w-xs animate-pop-in">
@@ -1316,18 +1369,15 @@ export default function Home() {
       {showTutorial && user && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative mx-4 w-full max-w-sm animate-pop-in">
-            {/* 단계 표시 */}
             <div className="flex justify-center gap-1.5 mb-4">
               {tutorialSteps.map((_, i) => (
                 <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === tutorialStep ? 'w-6 bg-blue-400' : i < tutorialStep ? 'w-1.5 bg-blue-300' : 'w-1.5 bg-white/30'}`} />
               ))}
             </div>
-
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl">
               <p className="text-2xl mb-2">{tutorialSteps[tutorialStep].title.split(' ')[0]}</p>
               <h3 className="text-lg font-bold mb-2">{tutorialSteps[tutorialStep].title.split(' ').slice(1).join(' ')}</h3>
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{tutorialSteps[tutorialStep].desc}</p>
-
               <div className="flex gap-2 mt-6">
                 {tutorialStep > 0 && (
                   <button onClick={() => setTutorialStep(s => s-1)}
@@ -1346,7 +1396,6 @@ export default function Home() {
                   {tutorialStep < tutorialSteps.length - 1 ? '다음 →' : '시작하기 🎉'}
                 </button>
               </div>
-
               {tutorialStep < tutorialSteps.length - 1 && (
                 <button onClick={() => {
                   setShowTutorial(false)
@@ -1378,7 +1427,6 @@ export default function Home() {
               아래 <span className="font-bold text-blue-500">공유 버튼 □↑</span>을 탭한 후<br/>
               <span className="font-bold">"홈 화면에 추가"</span>를 선택해주세요
             </div>
-            {/* iOS 화살표 */}
             <div className="flex justify-center mt-2">
               <p className="text-2xl animate-bounce">↓</p>
             </div>
@@ -1409,8 +1457,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* ? 도움말 버튼 (로그인 후에만) */}
-      {user && !showTutorial && (
+      {/* ? 도움말 버튼 */}
+      {user && !showTutorial && activeTab !== 'board' && (
         <button onClick={() => { setTutorialStep(0); setShowTutorial(true) }}
           className="fixed right-4 bottom-20 md:bottom-8 z-[80] w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-lg font-bold btn">
           ?
@@ -1418,8 +1466,8 @@ export default function Home() {
       )}
 
       {!user ? (
+        /* ── 비로그인 ── */
         <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-          {/* 헤더 */}
           <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between max-w-5xl mx-auto">
             <div>
               <h1 className="text-base font-bold">📅 학교 캘린더</h1>
@@ -1431,7 +1479,6 @@ export default function Home() {
           </div>
 
           <div className="max-w-5xl mx-auto flex flex-col md:flex-row">
-            {/* 왼쪽: 탭 */}
             <div className="md:w-64 md:border-r md:border-gray-200 md:dark:border-gray-700 md:min-h-screen md:p-3">
               <div className="hidden md:flex md:flex-col md:gap-1 md:mt-3">
                 <button onClick={() => setActiveTab('calendar')}
@@ -1445,11 +1492,9 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 메인 */}
             <div className="flex-1 pb-20 md:pb-6">
               {activeTab === 'calendar' && (
                 <div className="px-3 py-4 md:px-6 md:py-6">
-                  {/* 로그인 안내 배너 */}
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
                     <span className="text-xl">🔒</span>
                     <div>
@@ -1478,7 +1523,6 @@ export default function Home() {
 
               {activeTab === 'teacher' && (
                 <div className="flex flex-col">
-                  {/* 로그인 안내 배너 */}
                   <div className="mx-3 mt-4 mb-3 md:mx-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
                     <span className="text-xl">💬</span>
                     <div>
@@ -1538,7 +1582,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 모바일 하단 탭 */}
+          {/* 모바일 하단 탭 (비로그인) */}
           <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden">
             <button onClick={() => setActiveTab('calendar')}
               className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab==='calendar'?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
@@ -1580,6 +1624,7 @@ export default function Home() {
           )}
         </div>
       ) : (
+        /* ── 로그인 후 ── */
         <div className="flex flex-col md:flex-row min-h-screen max-w-5xl mx-auto">
 
           {/* 사이드바 / 헤더 */}
@@ -1591,10 +1636,12 @@ export default function Home() {
                   {userGrade && <span className="text-xs text-gray-400 dark:text-gray-500">{userGrade}학년</span>}
                   {isAdmin   && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
                   {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name} 선생님</span>}
+                  {!isAdmin && approvedCount > 0 && (
+                    <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">⭐ 일정 승인 {approvedCount}회</span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 md:w-full">
-                {/* 알림 버튼 - badgeCount는 active만 */}
                 <button onClick={() => setShowNotifications(true)}
                   className="btn relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
                   🔔<span className="hidden md:inline ml-1 text-xs">알림</span>
@@ -1604,7 +1651,6 @@ export default function Home() {
                     </span>
                   )}
                 </button>
-                {/* 선생님 수신함 버튼 */}
                 {isTeacher && (
                   <button onClick={() => setShowMsgInbox(true)}
                     className="btn relative px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
@@ -1616,7 +1662,6 @@ export default function Home() {
                     )}
                   </button>
                 )}
-                {/* 학생 + 관리자: 보낸 메시지 버튼 */}
                 {!isTeacher && (
                   <button onClick={openSentMessages}
                     className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
@@ -1634,11 +1679,17 @@ export default function Home() {
 
             {/* PC 사이드 탭 */}
             <div className="hidden md:flex md:flex-col md:p-3 md:gap-1">
-              {(['calendar','teacher'] as Tab[]).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)}
+              {(['calendar','board','teacher'] as Tab[]).map(tab => (
+                <button key={tab} onClick={() => {
+                  if (tab === 'board') {
+                    loadBoardPosts(userGrade ?? boardGrade)
+                    if (userGrade) setBoardGrade(userGrade)
+                  }
+                  setActiveTab(tab)
+                }}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab===tab ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                  <span className="text-lg">{tab==='calendar'?'📅':'🏫'}</span>
-                  {tab==='calendar'?'캘린더':'선생님 위치'}
+                  <span className="text-lg">{tab==='calendar'?'📅': tab==='board'?'📋':'🏫'}</span>
+                  {tab==='calendar'?'캘린더': tab==='board'?'게시판':'선생님 위치'}
                 </button>
               ))}
             </div>
@@ -1651,8 +1702,6 @@ export default function Home() {
               {/* 캘린더 탭 */}
               {activeTab === 'calendar' && (
                 <div className="px-3 py-4 md:px-6 md:py-6">
-
-                  {/* 관리자 패널 */}
                   {isAdmin && (
                     <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900">
                       <div className="flex items-center justify-between mb-3">
@@ -1669,7 +1718,6 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* 메시지 승인 대기 */}
                       {pendingMessages.length > 0 && (
                         <div className="mb-3">
                           <p className="text-xs font-medium text-orange-500 mb-1.5">💬 메시지 승인 대기 ({pendingMessages.length})</p>
@@ -1691,7 +1739,6 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* 일정 승인 대기 */}
                       <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">📋 일정 승인 대기</p>
                       {pendingPosts.length === 0
                         ? <p className="text-xs text-gray-400 dark:text-gray-500">대기 중인 일정이 없어요</p>
@@ -1725,6 +1772,51 @@ export default function Home() {
                 </div>
               )}
 
+              {/* 게시판 탭 */}
+              {activeTab === 'board' && (
+                <div className="flex flex-col min-h-screen">
+                  {/* 학년 선택 */}
+                  <div className="flex gap-1.5 px-3 pt-4 pb-2 md:px-6 sticky top-0 bg-white dark:bg-gray-950 z-10 border-b border-gray-100 dark:border-gray-800">
+                    {[1,2,3].map(g => (
+                      <button key={g} onClick={() => setBoardGrade(g)}
+                        className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${boardGrade === g ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                        {g}학년
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 글 목록 */}
+                  <div className="flex-1 px-3 py-3 md:px-6 flex flex-col gap-2">
+                    {boardLoading
+                      ? <div className="flex justify-center py-12 text-gray-300 dark:text-gray-600 text-3xl animate-pulse">⏳</div>
+                      : boardPosts.length === 0
+                        ? <div className="flex flex-col items-center justify-center h-48 gap-2 text-gray-400 dark:text-gray-500">
+                            <p className="text-3xl">📭</p>
+                            <p className="text-sm">아직 글이 없어요. 첫 글을 작성해보세요!</p>
+                          </div>
+                        : boardPosts.map(post => (
+                            <button key={post.id} onClick={() => openBoardPost(post)}
+                              className="card-hover w-full text-left p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
+                              <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">{post.title}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{post.content}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs text-gray-400 dark:text-gray-500">익명</span>
+                                <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">{formatBoardDate(post.created_at)}</span>
+                              </div>
+                            </button>
+                          ))
+                    }
+                  </div>
+
+                  {/* 글쓰기 FAB */}
+                  <button onClick={() => setShowBoardForm(true)}
+                    className="btn fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-blue-900/40 text-2xl flex items-center justify-center z-20">
+                    ✍️
+                  </button>
+                </div>
+              )}
+
               {/* 선생님 위치 탭 */}
               {activeTab === 'teacher' && (
                 <div className="flex flex-col">
@@ -1736,6 +1828,20 @@ export default function Home() {
                           className="btn px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium shadow-sm">
                           + 선생님 추가
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 선생님 로그인 안내 배너 */}
+                  {!isTeacher && (
+                    <div className="mx-3 mt-4 mb-1 md:mx-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-start gap-3">
+                      <span className="text-xl shrink-0">💬</span>
+                      <div>
+                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">선생님과 앱으로 소통하고 싶으신가요?</p>
+                        <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5 leading-relaxed">
+                          선생님께 클래스톡 로그인을 요청해 보세요!<br />
+                          선생님이 로그인하면 앱을 통해 직접 메시지를 주고받을 수 있어요. 🙌
+                        </p>
                       </div>
                     </div>
                   )}
@@ -1775,7 +1881,6 @@ export default function Home() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
                                       </div>
                                       <div className="flex gap-2 shrink-0">
-                                        {/* 인증된 선생님에게만 메시지 가능, 본인 제외 */}
                                         {t.user_id && !(isTeacher && myTeacherRow?.id === t.id) && (
                                           <button onClick={() => openMsgForm(t)}
                                             className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
@@ -1806,11 +1911,17 @@ export default function Home() {
 
             {/* 모바일 하단 탭 */}
             <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden">
-              {(['calendar','teacher'] as Tab[]).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)}
+              {(['calendar','board','teacher'] as Tab[]).map(tab => (
+                <button key={tab} onClick={() => {
+                  if (tab === 'board') {
+                    loadBoardPosts(userGrade ?? boardGrade)
+                    if (userGrade) setBoardGrade(userGrade)
+                  }
+                  setActiveTab(tab)
+                }}
                   className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab===tab?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
-                  <span className="text-xl">{tab==='calendar'?'📅':'🏫'}</span>
-                  {tab==='calendar'?'캘린더':'선생님 위치'}
+                  <span className="text-xl">{tab==='calendar'?'📅': tab==='board'?'📋':'🏫'}</span>
+                  {tab==='calendar'?'캘린더': tab==='board'?'게시판':'선생님'}
                 </button>
               ))}
             </div>
@@ -1819,6 +1930,112 @@ export default function Home() {
       )}
 
       {/* ──────────── 팝업들 ──────────── */}
+
+      {/* 게시판 글 상세 팝업 */}
+      {showBoardPost && selectedPost && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[90vh] flex flex-col`}>
+            <div className="flex items-start justify-between mb-3 shrink-0">
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full">{selectedPost.grade}학년</span>
+                </div>
+                <h3 className="font-bold text-base leading-snug">{selectedPost.title}</h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-xs text-gray-400">익명</span>
+                  <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                  <span className="text-xs text-gray-400">{formatBoardDate(selectedPost.created_at)}</span>
+                  {isAdmin && (
+                    <button onClick={() => fetchBoardAuthor(selectedPost.user_id)}
+                      className="text-xs text-orange-400 underline">작성자 확인</button>
+                  )}
+                  {isAdmin && showPostAuthor && (
+                    <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-500 px-2 py-0.5 rounded-full">{showPostAuthor}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                {(isAdmin || user?.id === selectedPost.user_id) && (
+                  <button onClick={() => deleteBoardPost(selectedPost.id)}
+                    className="btn text-xs px-2.5 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-400 rounded-xl">삭제</button>
+                )}
+                <button onClick={() => { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null) }}
+                  className="btn text-xs px-2.5 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl">닫기</button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 -mx-5 px-5">
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed pb-4 border-b border-gray-100 dark:border-gray-800">
+                {selectedPost.content}
+              </p>
+
+              <div className="py-3 flex flex-col gap-3">
+                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500">댓글 {boardComments.length}개</p>
+                {boardComments.length === 0
+                  ? <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">첫 댓글을 남겨보세요 💬</p>
+                  : boardComments.map(c => (
+                      <div key={c.id} className="flex items-start gap-2">
+                        <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">익명</span>
+                              {isAdmin && (
+                                <button onClick={() => fetchBoardAuthor(c.user_id)}
+                                  className="text-xs text-orange-400 underline">확인</button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-gray-400">{formatBoardDate(c.created_at)}</span>
+                              {(isAdmin || user?.id === c.user_id) && (
+                                <button onClick={() => deleteBoardComment(c.id)}
+                                  className="text-xs text-red-400 hover:text-red-500">🗑</button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.content}</p>
+                        </div>
+                      </div>
+                    ))
+                }
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-3 shrink-0 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <input value={boardCommentInput} onChange={e => setBoardCommentInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitBoardComment() }}}
+                placeholder="댓글을 입력하세요..." className={`${INPUT} flex-1`} />
+              <button onClick={submitBoardComment}
+                className="btn px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium shadow-sm shrink-0">
+                등록
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 게시판 글쓰기 팝업 */}
+      {showBoardForm && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-base">✍️ 글쓰기 ({boardGrade}학년)</h3>
+            </div>
+            <input placeholder="제목" value={boardTitle}
+              onChange={e => setBoardTitle(e.target.value)} className={`${INPUT} mb-3`} maxLength={50} />
+            <textarea placeholder="내용을 입력하세요 (익명으로 게시돼요)" value={boardContent}
+              onChange={e => setBoardContent(e.target.value)}
+              className={`${INPUT} mb-4`} rows={8} />
+            <div className="flex gap-2">
+              <button onClick={() => { setShowBoardForm(false); setBoardTitle(''); setBoardContent('') }}
+                className={BTN_GRAY}>취소</button>
+              <button onClick={submitBoardPost} disabled={boardSubmitting || !boardTitle.trim() || !boardContent.trim()}
+                className={`${BTN_BLUE} disabled:opacity-50 disabled:cursor-not-allowed`}>
+                {boardSubmitting ? '등록 중...' : '익명으로 게시'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 메시지 보내기 */}
       {showMsgForm && msgTarget && (
@@ -1847,8 +2064,6 @@ export default function Home() {
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
             <h3 className="font-bold text-base mb-3">💬 수신된 메시지</h3>
-
-            {/* 탭 */}
             <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-4">
               <button onClick={() => setInboxTab('unread')}
                 className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab==='unread' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
@@ -1859,8 +2074,6 @@ export default function Home() {
                 답장 완료 {myMessages.filter(m=>m.reply).length > 0 && `(${myMessages.filter(m=>m.reply).length})`}
               </button>
             </div>
-
-            {/* 미답장 탭 */}
             {inboxTab === 'unread' && (
               myMessages.filter(m=>!m.reply).length === 0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">미답장 메시지가 없어요</p>
@@ -1879,8 +2092,6 @@ export default function Home() {
                     ))}
                   </div>
             )}
-
-            {/* 답장 완료 탭 */}
             {inboxTab === 'replied' && (
               myMessages.filter(m=>m.reply).length === 0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">답장한 메시지가 없어요</p>
@@ -1898,7 +2109,6 @@ export default function Home() {
                     ))}
                   </div>
             )}
-
             <button onClick={()=>setShowMsgInbox(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
@@ -2062,7 +2272,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 기간 수정 팝업 (학생/선생님용) */}
+      {/* 기간 수정 팝업 */}
       {showEditEvent && editingEvent && (
         <div className={overlayClass}>
           <div className={sheetClass}>
@@ -2111,7 +2321,6 @@ export default function Home() {
                 보류{heldNotifications.length>0&&` (${heldNotifications.length})`}
               </button>
             </div>
-
             {notifTab==='active' && (
               activeNotifications.length===0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">새 알림이 없어요</p>
@@ -2131,7 +2340,6 @@ export default function Home() {
                   </div>
                 ))
             )}
-
             {notifTab==='held' && (
               heldNotifications.length===0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">보류된 알림이 없어요</p>
@@ -2148,7 +2356,6 @@ export default function Home() {
                   </div>
                 ))
             )}
-
             <button onClick={()=>setShowNotifications(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
@@ -2161,8 +2368,6 @@ export default function Home() {
           <div className={sheetClass}>
             <h3 className="font-bold text-base mb-1">📅 날짜 선택</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">"{pendingPostTitleRef.current}"</p>
-
-            {/* 하루/기간 선택 */}
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
               <div className="flex gap-2">
@@ -2174,8 +2379,6 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
-            {/* 추천 날짜 */}
             {pendingDefaultDateRef.current && (
               <div className="mb-3">
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">추천 날짜</p>
@@ -2191,7 +2394,6 @@ export default function Home() {
                 </button>
               </div>
             )}
-
             <div className="mb-4">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">시작 날짜</p>
               <input type="date" value={pickerDate} onChange={e=>setPickerDate(e.target.value)} className={INPUT} />
@@ -2256,7 +2458,6 @@ export default function Home() {
             }
             {showAddForm ? (
               <>
-                {/* 개인 일정 토글 */}
                 <label className="flex items-center gap-3 mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl cursor-pointer select-none">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">🔒 개인 일정</p>
@@ -2269,7 +2470,6 @@ export default function Home() {
                 </label>
 
                 {popupIsPersonal ? (
-                  /* 개인 일정 색상 선택 */
                   <div className="mb-2">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">색상</p>
                     <div className="flex gap-2 flex-wrap">
@@ -2349,7 +2549,6 @@ export default function Home() {
       {showNoticePopup && notices.length > 0 && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[150] animate-fade-in px-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md animate-pop-in overflow-hidden">
-            {/* 헤더 */}
             <div className="bg-yellow-400 dark:bg-yellow-500 px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📢</span>
@@ -2361,13 +2560,9 @@ export default function Home() {
                 </span>
               )}
             </div>
-
-            {/* 마크다운 내용 */}
             <div className="px-5 py-4 max-h-[50vh] overflow-y-auto notice-md">
               <ReactMarkdown rehypePlugins={[rehypeRaw]}>{notices[activeNoticeIdx].content}</ReactMarkdown>
             </div>
-
-            {/* 관리자 수정/삭제 버튼 */}
             {isAdmin && (
               <div className="px-5 pb-2 flex gap-2">
                 <button onClick={() => { setShowNoticePopup(false); openEditNotice(notices[activeNoticeIdx]) }}
@@ -2376,8 +2571,6 @@ export default function Home() {
                   className="text-xs text-red-400 hover:text-red-500">삭제</button>
               </div>
             )}
-
-            {/* 버튼 */}
             <div className="px-5 pb-5 flex flex-col gap-2">
               <div className="flex gap-2">
                 <button onClick={() => dismissNotice(1)}
@@ -2400,7 +2593,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 공지 관리 팝업 (관리자) */}
+      {/* 공지 관리 팝업 */}
       {showNoticeManager && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[85vh] overflow-y-auto`}>
@@ -2441,7 +2634,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 공지 작성/수정 팝업 (관리자) */}
+      {/* 공지 작성/수정 팝업 */}
       {showNoticeForm && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[95vh] overflow-y-auto`}>
@@ -2464,9 +2657,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="mb-3">
-                {/* 툴바 */}
                 <div className="flex flex-wrap gap-1.5 mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  {/* 정렬 */}
                   <button onClick={() => insertToContent('<div style="text-align:left">', '</div>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">≡ 왼쪽</button>
                   <button onClick={() => insertToContent('<div style="text-align:center">', '</div>')}
@@ -2474,7 +2665,6 @@ export default function Home() {
                   <button onClick={() => insertToContent('<div style="text-align:right">', '</div>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">≡ 오른쪽</button>
                   <div className="w-px bg-gray-200 dark:bg-gray-600 mx-0.5" />
-                  {/* 서식 - HTML 태그로 변경 */}
                   <button onClick={() => insertToContent('<strong>', '</strong>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg font-bold">B</button>
                   <button onClick={() => insertToContent('<em>', '</em>')}
@@ -2484,10 +2674,8 @@ export default function Home() {
                   <button onClick={() => insertToContent('<h3>', '</h3>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">H3</button>
                   <div className="w-px bg-gray-200 dark:bg-gray-600 mx-0.5" />
-                  {/* 링크 */}
                   <button onClick={() => insertToContent('<a href="https://">', '</a>')}
                     className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">🔗</button>
-                  {/* 이미지 업로드 */}
                   <label className="btn text-xs px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer">
                     {uploadingImage ? '⏳' : '🖼'}
                     <input type="file" accept="image/*" className="hidden"

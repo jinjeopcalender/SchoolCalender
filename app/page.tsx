@@ -1274,21 +1274,6 @@ export default function Home() {
   const approvePost = async (postId: string) => {
     const { error } = await supabase.from('posts').update({ status: 'approved' }).eq('id', postId)
     if (error) { showToast(error.message, 'error'); return }
-
-    // 해당 일정 정보 가져오기
-    const { data: post } = await supabase.from('posts').select('grade, created_by').eq('id', postId).single()
-    if (post) {
-      // 해당 학년 학생들에게 notifications 추가 (일정 올린 본인 제외)
-      let q = supabase.from('users').select('id').neq('role', 'admin').neq('role', 'teacher').neq('id', post.created_by)
-      if (post.grade) q = q.eq('grade', post.grade)
-      const { data: targetUsers } = await q
-      if (targetUsers?.length) {
-        await supabase.from('notifications').insert(
-          targetUsers.map(u => ({ user_id: u.id, post_id: postId, is_read: false, status: 'pending' }))
-        )
-      }
-    }
-
     setPendingPosts(prev => prev.filter(p => p.id !== postId))
   }
   const rejectPost = async (postId: string) => {
@@ -2230,8 +2215,8 @@ export default function Home() {
                           {m.teachers?.name} 선생님 ({m.teachers?.subject}) · {new Date(m.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
                         </p>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${m.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
-                            m.status === 'rejected' ? 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400' :
-                              'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          m.status === 'rejected' ? 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400' :
+                            'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
                           }`}>
                           {m.status === 'approved' ? '전달됨' : m.status === 'rejected' ? '거절됨' : '검토중'}
                         </span>

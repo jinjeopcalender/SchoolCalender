@@ -1,6 +1,6 @@
 // supabase/functions/send-push/index.ts
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import webpush from 'https://esm.sh/web-push@3.6.7'
+import webpush from 'npm:web-push@3.6.7'
 
 const VAPID_PUBLIC_KEY  = 'BAi3UyOI08yglyMnzlbAMzscB4u9HniR_TOvyWP1PBpwQ2amse88Uaklbdb0CNvkf3w2UztOH3_9X1BFGiLc8e4'
 const VAPID_PRIVATE_KEY = '3_GccWO_j_3KXaW6n_s6Zl30-KXLS4MUSFGFIaeDcbw'
@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (e) {
+    console.error('Error:', e)
     return new Response(String(e), { status: 500, headers: corsHeaders })
   }
 })

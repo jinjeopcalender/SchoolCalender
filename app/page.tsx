@@ -13,14 +13,14 @@ type Category = '수행평가' | '기타'
 const CATEGORY_STYLES: Record<string, { badge: string; color: string }> = {
   '수행평가': { badge: 'bg-blue-100 text-blue-700', color: '#3b82f6' },
   '학교행사': { badge: 'bg-green-100 text-green-700', color: '#10b981' },
-  '휴일':   { badge: 'bg-red-100 text-red-600',   color: '#ef4444' },
-  '기타':     { badge: 'bg-purple-100 text-purple-700', color: '#8b5cf6' },
-  '개인':     { badge: 'bg-yellow-100 text-yellow-700', color: '#f59e0b' },
+  '휴일': { badge: 'bg-red-100 text-red-600', color: '#ef4444' },
+  '기타': { badge: 'bg-purple-100 text-purple-700', color: '#8b5cf6' },
+  '개인': { badge: 'bg-yellow-100 text-yellow-700', color: '#f59e0b' },
 }
 const getCategoryBadge = (cat: string) => CATEGORY_STYLES[cat]?.badge ?? 'bg-gray-100 text-gray-600'
 const getCategoryColor = (cat: string) => CATEGORY_STYLES[cat]?.color ?? '#8b5cf6'
 
-const SUBJECTS = ['국어','수학','영어','과학','사회','역사','도덕','체육','음악','미술','기술·가정','정보','한문','기타']
+const SUBJECTS = ['국어', '수학', '영어', '과학', '사회', '역사', '도덕', '체육', '음악', '미술', '기술·가정', '정보', '한문', '기타']
 
 const INPUT = 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm'
 const BTN_GRAY = 'flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm'
@@ -29,71 +29,71 @@ const BTN_GREEN = 'btn flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white 
 
 export default function Home() {
   // 유저
-  const [user,             setUser]             = useState<any>(null)
-  const [userGrade,        setUserGrade]        = useState<number | null>(null)
-  const [isAdmin,          setIsAdmin]          = useState(false)
-  const [approvedCount,    setApprovedCount]    = useState(0)
-  const [isTeacher,        setIsTeacher]        = useState(false)
-  const [myTeacherRow,     setMyTeacherRow]     = useState<any>(null)
-  const [showGradePicker,  setShowGradePicker]  = useState(false)
-  const [showTeacherPicker,setShowTeacherPicker]= useState(false)
-  const [showTeacherAuth,  setShowTeacherAuth]  = useState(false)
-  const [teacherAuthPw,    setTeacherAuthPw]    = useState('')
+  const [user, setUser] = useState<any>(null)
+  const [userGrade, setUserGrade] = useState<number | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [approvedCount, setApprovedCount] = useState(0)
+  const [isTeacher, setIsTeacher] = useState(false)
+  const [myTeacherRow, setMyTeacherRow] = useState<any>(null)
+  const [showGradePicker, setShowGradePicker] = useState(false)
+  const [showTeacherPicker, setShowTeacherPicker] = useState(false)
+  const [showTeacherAuth, setShowTeacherAuth] = useState(false)
+  const [teacherAuthPw, setTeacherAuthPw] = useState('')
   const [teacherAuthError, setTeacherAuthError] = useState('')
 
   // 캘린더
-  const [events,        setEvents]        = useState<any[]>([])
-  const [pendingPosts,  setPendingPosts]  = useState<any[]>([])
-  const [activeTab,     setActiveTab]     = useState<Tab>('calendar')
+  const [events, setEvents] = useState<any[]>([])
+  const [pendingPosts, setPendingPosts] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<Tab>('calendar')
 
   // 날짜 팝업
-  const [selectedDate,       setSelectedDate]       = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedDateEvents, setSelectedDateEvents] = useState<any[]>([])
-  const [showDatePopup,      setShowDatePopup]      = useState(false)
-  const [showAddForm,        setShowAddForm]        = useState(false)
-  const [popupTitle,         setPopupTitle]         = useState('')
-  const [popupContent,       setPopupContent]       = useState('')
-  const [popupCategory,      setPopupCategory]      = useState<Category>('수행평가')
-  const [popupGrade,         setPopupGrade]         = useState<number | null>(null)
+  const [showDatePopup, setShowDatePopup] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [popupTitle, setPopupTitle] = useState('')
+  const [popupContent, setPopupContent] = useState('')
+  const [popupCategory, setPopupCategory] = useState<Category>('수행평가')
+  const [popupGrade, setPopupGrade] = useState<number | null>(null)
 
   // 학교일정
   const [showSchoolEventForm, setShowSchoolEventForm] = useState(false)
-  const [editingSchoolEvent,  setEditingSchoolEvent]  = useState<any>(null)
-  const [schoolEventTitle,    setSchoolEventTitle]    = useState('')
-  const [schoolEventContent,  setSchoolEventContent]  = useState('')
-  const [schoolEventDate,     setSchoolEventDate]     = useState('')
-  const [schoolEventEndDate,  setSchoolEventEndDate]  = useState('')
-  const [schoolEventDateType, setSchoolEventDateType] = useState<'single'|'range'>('single')
-  const [schoolEventGrade,    setSchoolEventGrade]    = useState<number | null>(null)
-  const [schoolEventType,     setSchoolEventType]     = useState<'학교행사'|'휴일'>('학교행사')
+  const [editingSchoolEvent, setEditingSchoolEvent] = useState<any>(null)
+  const [schoolEventTitle, setSchoolEventTitle] = useState('')
+  const [schoolEventContent, setSchoolEventContent] = useState('')
+  const [schoolEventDate, setSchoolEventDate] = useState('')
+  const [schoolEventEndDate, setSchoolEventEndDate] = useState('')
+  const [schoolEventDateType, setSchoolEventDateType] = useState<'single' | 'range'>('single')
+  const [schoolEventGrade, setSchoolEventGrade] = useState<number | null>(null)
+  const [schoolEventType, setSchoolEventType] = useState<'학교행사' | '휴일'>('학교행사')
 
   // 날짜 팝업 일정 추가 기간
-  const [popupDateType,  setPopupDateType]  = useState<'single'|'range'>('single')
-  const [popupEndDate,   setPopupEndDate]   = useState('')
+  const [popupDateType, setPopupDateType] = useState<'single' | 'range'>('single')
+  const [popupEndDate, setPopupEndDate] = useState('')
   const [popupIsPersonal, setPopupIsPersonal] = useState(false)
-  const [popupColor,     setPopupColor]     = useState('#f59e0b')
+  const [popupColor, setPopupColor] = useState('#f59e0b')
 
   // 날짜 팝업 일정 수정 (기간만)
-  const [showEditEvent,   setShowEditEvent]   = useState(false)
-  const [editingEvent,    setEditingEvent]    = useState<any>(null)
-  const [editStartDate,   setEditStartDate]   = useState('')
-  const [editEndDate,     setEditEndDate]     = useState('')
-  const [editDateType,    setEditDateType]    = useState<'single'|'range'>('single')
+  const [showEditEvent, setShowEditEvent] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<any>(null)
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editDateType, setEditDateType] = useState<'single' | 'range'>('single')
 
   // 알림
-  const [notifications,    setNotifications]    = useState<any[]>([])
-  const [showNotifications,setShowNotifications]= useState(false)
-  const [notifTab,         setNotifTab]         = useState<'active'|'held'>('active')
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notifTab, setNotifTab] = useState<'active' | 'held'>('active')
 
   // 날짜 선택 대기
-  const [pendingPostId,  setPendingPostId]  = useState<string | null>(null)
-  const pendingPostTitleRef   = useRef<string | null>(null)
-  const pendingNotifIdRef     = useRef<string | null>(null)
+  const [pendingPostId, setPendingPostId] = useState<string | null>(null)
+  const pendingPostTitleRef = useRef<string | null>(null)
+  const pendingNotifIdRef = useRef<string | null>(null)
   const pendingDefaultDateRef = useRef<string | null>(null)
-  const [showDatePicker,    setShowDatePicker]    = useState(false)
-  const [pickerDate,        setPickerDate]        = useState('')
-  const [pickerEndDate,     setPickerEndDate]     = useState('')
-  const [pickerDateType,    setPickerDateType]    = useState<'single'|'range'>('single')
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [pickerDate, setPickerDate] = useState('')
+  const [pickerEndDate, setPickerEndDate] = useState('')
+  const [pickerDateType, setPickerDateType] = useState<'single' | 'range'>('single')
   const pendingEndDateRef = useRef<string | null>(null)
 
   // PWA 설치
@@ -125,18 +125,18 @@ export default function Home() {
   }
 
   // 공지
-  const [notices,          setNotices]          = useState<any[]>([])
-  const [allNotices,       setAllNotices]       = useState<any[]>([])
-  const [activeNoticeIdx,  setActiveNoticeIdx]  = useState(0)
-  const [showNoticePopup,  setShowNoticePopup]  = useState(false)
-  const [showNoticeForm,   setShowNoticeForm]   = useState(false)
-  const [showNoticeManager,setShowNoticeManager]= useState(false)
-  const [noticeTitle,      setNoticeTitle]      = useState('')
-  const [noticeContent,    setNoticeContent]    = useState('')
-  const [noticePreview,    setNoticePreview]    = useState(false)
-  const [editingNotice,    setEditingNotice]    = useState<any>(null)
-  const [uploadingImage,   setUploadingImage]   = useState(false)
-  const noticeTextareaRef  = useRef<HTMLTextAreaElement>(null)
+  const [notices, setNotices] = useState<any[]>([])
+  const [allNotices, setAllNotices] = useState<any[]>([])
+  const [activeNoticeIdx, setActiveNoticeIdx] = useState(0)
+  const [showNoticePopup, setShowNoticePopup] = useState(false)
+  const [showNoticeForm, setShowNoticeForm] = useState(false)
+  const [showNoticeManager, setShowNoticeManager] = useState(false)
+  const [noticeTitle, setNoticeTitle] = useState('')
+  const [noticeContent, setNoticeContent] = useState('')
+  const [noticePreview, setNoticePreview] = useState(false)
+  const [editingNotice, setEditingNotice] = useState<any>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const noticeTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   // 튜토리얼
   const [showTutorial, setShowTutorial] = useState(false)
@@ -153,9 +153,9 @@ export default function Home() {
   ]
 
   // 토스트
-  const [toast, setToast] = useState<{msg: string; type: 'success'|'error'|'info'} | null>(null)
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const showToast = (msg: string, type: 'success'|'error'|'info' = 'success') => {
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ msg, type })
     toastTimer.current = setTimeout(() => setToast(null), 3000)
@@ -186,43 +186,43 @@ export default function Home() {
   }
 
   // 선생님 관리
-  const [teachers,        setTeachers]        = useState<any[]>([])
+  const [teachers, setTeachers] = useState<any[]>([])
   const [showTeacherForm, setShowTeacherForm] = useState(false)
-  const [teacherName,     setTeacherName]     = useState('')
-  const [teacherSubject,  setTeacherSubject]  = useState(SUBJECTS[0])
+  const [teacherName, setTeacherName] = useState('')
+  const [teacherSubject, setTeacherSubject] = useState(SUBJECTS[0])
   const [teacherLocation, setTeacherLocation] = useState('')
-  const [editingTeacher,  setEditingTeacher]  = useState<any>(null)
-  const [openSubjects,    setOpenSubjects]    = useState<Set<string>>(new Set(SUBJECTS))
+  const [editingTeacher, setEditingTeacher] = useState<any>(null)
+  const [openSubjects, setOpenSubjects] = useState<Set<string>>(new Set(SUBJECTS))
 
   // 메시지
-  const [showMsgForm,     setShowMsgForm]     = useState(false)
-  const [msgTarget,       setMsgTarget]       = useState<any>(null)
-  const [msgContent,      setMsgContent]      = useState('')
+  const [showMsgForm, setShowMsgForm] = useState(false)
+  const [msgTarget, setMsgTarget] = useState<any>(null)
+  const [msgContent, setMsgContent] = useState('')
   const [pendingMessages, setPendingMessages] = useState<any[]>([])
-  const [myMessages,      setMyMessages]      = useState<any[]>([])
-  const [showMsgInbox,    setShowMsgInbox]    = useState(false)
-  const [inboxTab,        setInboxTab]        = useState<'unread'|'replied'>('unread')
-  const [sentMessages,    setSentMessages]    = useState<any[]>([])
-  const [showSentMessages,setShowSentMessages]= useState(false)
-  const [sentPage,        setSentPage]        = useState(1)
+  const [myMessages, setMyMessages] = useState<any[]>([])
+  const [showMsgInbox, setShowMsgInbox] = useState(false)
+  const [inboxTab, setInboxTab] = useState<'unread' | 'replied'>('unread')
+  const [sentMessages, setSentMessages] = useState<any[]>([])
+  const [showSentMessages, setShowSentMessages] = useState(false)
+  const [sentPage, setSentPage] = useState(1)
   const PAGE_SIZE = 10
-  const [replyTarget,     setReplyTarget]     = useState<any>(null)
-  const [replyContent,    setReplyContent]    = useState('')
-  const [showReplyForm,   setShowReplyForm]   = useState(false)
+  const [replyTarget, setReplyTarget] = useState<any>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [showReplyForm, setShowReplyForm] = useState(false)
 
   // 게시판
-  const [boardGrade,        setBoardGrade]        = useState<number>(1)
-  const [boardPosts,        setBoardPosts]        = useState<any[]>([])
-  const [boardLoading,      setBoardLoading]      = useState(false)
-  const [showBoardPost,     setShowBoardPost]     = useState(false)
-  const [selectedPost,      setSelectedPost]      = useState<any>(null)
-  const [boardComments,     setBoardComments]     = useState<any[]>([])
-  const [showBoardForm,     setShowBoardForm]     = useState(false)
-  const [boardTitle,        setBoardTitle]        = useState('')
-  const [boardContent,      setBoardContent]      = useState('')
+  const [boardGrade, setBoardGrade] = useState<number>(1)
+  const [boardPosts, setBoardPosts] = useState<any[]>([])
+  const [boardLoading, setBoardLoading] = useState(false)
+  const [showBoardPost, setShowBoardPost] = useState(false)
+  const [selectedPost, setSelectedPost] = useState<any>(null)
+  const [boardComments, setBoardComments] = useState<any[]>([])
+  const [showBoardForm, setShowBoardForm] = useState(false)
+  const [boardTitle, setBoardTitle] = useState('')
+  const [boardContent, setBoardContent] = useState('')
   const [boardCommentInput, setBoardCommentInput] = useState('')
-  const [boardSubmitting,   setBoardSubmitting]   = useState(false)
-  const [showPostAuthor,    setShowPostAuthor]    = useState<string | null>(null)
+  const [boardSubmitting, setBoardSubmitting] = useState(false)
+  const [showPostAuthor, setShowPostAuthor] = useState<string | null>(null)
 
   // 푸시 알림
   const [pushEnabled, setPushEnabled] = useState(false)
@@ -235,45 +235,45 @@ export default function Home() {
 
   useEffect(() => {
     const handle = () => {
-      if (showBoardPost)       { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null); return }
-      if (showBoardForm)       { setShowBoardForm(false); setBoardTitle(''); setBoardContent(''); return }
-      if (showNoticePopup)     { setShowNoticePopup(false); return }
-      if (showNoticeManager)   { setShowNoticeManager(false); return }
-      if (showNoticeForm)      { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
-      if (showReplyForm)       { setShowReplyForm(false); setReplyContent(''); return }
-      if (showSentMessages)    { setShowSentMessages(false); return }
-      if (showMsgInbox)        { setShowMsgInbox(false); return }
-      if (showMsgForm)         { setShowMsgForm(false); setMsgContent(''); return }
-      if (showTeacherPicker)   { setShowTeacherPicker(false); return }
-      if (showTeacherForm)     { setShowTeacherForm(false); resetTeacherForm(); return }
+      if (showBoardPost) { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null); return }
+      if (showBoardForm) { setShowBoardForm(false); setBoardTitle(''); setBoardContent(''); return }
+      if (showNoticePopup) { setShowNoticePopup(false); return }
+      if (showNoticeManager) { setShowNoticeManager(false); return }
+      if (showNoticeForm) { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
+      if (showReplyForm) { setShowReplyForm(false); setReplyContent(''); return }
+      if (showSentMessages) { setShowSentMessages(false); return }
+      if (showMsgInbox) { setShowMsgInbox(false); return }
+      if (showMsgForm) { setShowMsgForm(false); setMsgContent(''); return }
+      if (showTeacherPicker) { setShowTeacherPicker(false); return }
+      if (showTeacherForm) { setShowTeacherForm(false); resetTeacherForm(); return }
       if (showSchoolEventForm) { setShowSchoolEventForm(false); resetSchoolEventForm(); return }
-      if (showEditEvent)       { setShowEditEvent(false); return }
-      if (showDatePicker)      { cancelDatePicker(); return }
-      if (showAddForm)         { setShowAddForm(false); return }
-      if (showDatePopup)       { closeDatePopup(); return }
-      if (showNotifications)   { setShowNotifications(false); return }
+      if (showEditEvent) { setShowEditEvent(false); return }
+      if (showDatePicker) { cancelDatePicker(); return }
+      if (showAddForm) { setShowAddForm(false); return }
+      if (showDatePopup) { closeDatePopup(); return }
+      if (showNotifications) { setShowNotifications(false); return }
     }
     window.addEventListener('popstate', handle)
     return () => window.removeEventListener('popstate', handle)
   }, [showBoardPost, showBoardForm, showNoticePopup, showNoticeManager, showNoticeForm, showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
-      showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications])
+    showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications])
 
-  useEffect(() => { if (showBoardPost)       pushHistory() }, [showBoardPost])
-  useEffect(() => { if (showBoardForm)       pushHistory() }, [showBoardForm])
-  useEffect(() => { if (showNotifications)   pushHistory() }, [showNotifications])
-  useEffect(() => { if (showDatePopup)        pushHistory() }, [showDatePopup])
-  useEffect(() => { if (showAddForm)          pushHistory() }, [showAddForm])
-  useEffect(() => { if (showDatePicker)       pushHistory() }, [showDatePicker])
-  useEffect(() => { if (showSchoolEventForm)  pushHistory() }, [showSchoolEventForm])
-  useEffect(() => { if (showEditEvent)        pushHistory() }, [showEditEvent])
-  useEffect(() => { if (showTeacherForm)      pushHistory() }, [showTeacherForm])
-  useEffect(() => { if (showTeacherPicker)    pushHistory() }, [showTeacherPicker])
-  useEffect(() => { if (showMsgForm)          pushHistory() }, [showMsgForm])
-  useEffect(() => { if (showMsgInbox)         pushHistory() }, [showMsgInbox])
-  useEffect(() => { if (showSentMessages)     pushHistory() }, [showSentMessages])
-  useEffect(() => { if (showNoticeManager)    pushHistory() }, [showNoticeManager])
-  useEffect(() => { if (showNoticeForm)       pushHistory() }, [showNoticeForm])
-  useEffect(() => { if (showReplyForm)        pushHistory() }, [showReplyForm])
+  useEffect(() => { if (showBoardPost) pushHistory() }, [showBoardPost])
+  useEffect(() => { if (showBoardForm) pushHistory() }, [showBoardForm])
+  useEffect(() => { if (showNotifications) pushHistory() }, [showNotifications])
+  useEffect(() => { if (showDatePopup) pushHistory() }, [showDatePopup])
+  useEffect(() => { if (showAddForm) pushHistory() }, [showAddForm])
+  useEffect(() => { if (showDatePicker) pushHistory() }, [showDatePicker])
+  useEffect(() => { if (showSchoolEventForm) pushHistory() }, [showSchoolEventForm])
+  useEffect(() => { if (showEditEvent) pushHistory() }, [showEditEvent])
+  useEffect(() => { if (showTeacherForm) pushHistory() }, [showTeacherForm])
+  useEffect(() => { if (showTeacherPicker) pushHistory() }, [showTeacherPicker])
+  useEffect(() => { if (showMsgForm) pushHistory() }, [showMsgForm])
+  useEffect(() => { if (showMsgInbox) pushHistory() }, [showMsgInbox])
+  useEffect(() => { if (showSentMessages) pushHistory() }, [showSentMessages])
+  useEffect(() => { if (showNoticeManager) pushHistory() }, [showNoticeManager])
+  useEffect(() => { if (showNoticeForm) pushHistory() }, [showNoticeForm])
+  useEffect(() => { if (showReplyForm) pushHistory() }, [showReplyForm])
   // ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -288,9 +288,9 @@ export default function Home() {
         const { data: schoolPosts } = await supabase.from('posts')
           .select('id, title, content, category, default_date, end_date')
           .eq('status', 'approved').in('category', ['학교행사', '휴일'])
-        const schoolEvents = (schoolPosts||[]).map(p => {
+        const schoolEvents = (schoolPosts || []).map(p => {
           const endExclusive = p.end_date
-            ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+            ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
             : undefined
           return {
             id: p.id, title: p.title, content: p.content, category: p.category,
@@ -317,7 +317,7 @@ export default function Home() {
         setTimeout(() => { setShowTutorial(true); setTutorialStep(0) }, 800)
       }
 
-      const admin   = ud?.role === 'admin'
+      const admin = ud?.role === 'admin'
       const teacher = ud?.role === 'teacher'
       setIsAdmin(admin)
       setIsTeacher(teacher)
@@ -364,14 +364,14 @@ export default function Home() {
   const loadCalendarData = async (uid: string, grade: number, admin: boolean) => {
     if (!admin) {
       const { data: missed } = await supabase.from('posts').select('id')
-        .eq('status','approved').eq('is_user_generated',true)
+        .eq('status', 'approved').eq('is_user_generated', true)
         .or(`grade.is.null,grade.eq.${grade}`).neq('created_by', uid)
       if (missed?.length)
         await supabase.from('notifications')
           .upsert(missed.map(p => ({ user_id: uid, post_id: p.id, is_read: false })), { onConflict: 'user_id,post_id' })
 
       const { data: school } = await supabase.from('posts').select('id, default_date, end_date, category')
-        .eq('status','approved').in('category',['학교행사','휴일']).or(`grade.is.null,grade.eq.${grade}`)
+        .eq('status', 'approved').in('category', ['학교행사', '휴일']).or(`grade.is.null,grade.eq.${grade}`)
       if (school?.length)
         await supabase.from('user_calendar')
           .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date, end_date: p.end_date ?? null })), { onConflict: 'user_id,post_id' })
@@ -383,14 +383,14 @@ export default function Home() {
         .eq('status', 'approved')
       const { data: adminCal } = await supabase.from('user_calendar')
         .select('id, post_id, assigned_date, end_date, is_personal, title, content, color').eq('user_id', uid)
-      const calMap = new Map((adminCal||[]).filter(c => !c.is_personal).map(c => [c.post_id, c]))
+      const calMap = new Map((adminCal || []).filter(c => !c.is_personal).map(c => [c.post_id, c]))
 
-      const adminEvents = (allPosts||[]).map(p => {
+      const adminEvents = (allPosts || []).map(p => {
         const cal = calMap.get(p.id)
         const assignedDate = cal?.assigned_date ?? p.default_date
         const endDate = cal?.end_date ?? p.end_date
         const endExclusive = endDate
-          ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+          ? (() => { const d = new Date(endDate); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
           : undefined
         const gradeLabel = p.grade ? `[${p.grade}학년] ` : ''
         return {
@@ -404,9 +404,9 @@ export default function Home() {
         }
       })
 
-      const adminPersonalEvents = (adminCal||[]).filter(c => c.is_personal).map(c => {
+      const adminPersonalEvents = (adminCal || []).filter(c => c.is_personal).map(c => {
         const endExclusive = c.end_date
-          ? (() => { const d = new Date(c.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+          ? (() => { const d = new Date(c.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
           : undefined
         return {
           id: c.id, title: c.title, content: c.content,
@@ -433,9 +433,9 @@ export default function Home() {
         .from('user_calendar').select('id, assigned_date, end_date, posts(id,title,content,category,created_by,grade)')
         .eq('user_id', uid).eq('is_personal', false)
 
-      const personalEvents = (personalCal||[]).map((item: any) => {
+      const personalEvents = (personalCal || []).map((item: any) => {
         const endDateExclusive = item.end_date
-          ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+          ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
           : undefined
         return {
           id: item.id, title: item.title, content: item.content,
@@ -448,9 +448,9 @@ export default function Home() {
         }
       })
 
-      const normalEvents = (normalCal||[]).filter((item: any) => item.posts).map((item: any) => {
+      const normalEvents = (normalCal || []).filter((item: any) => item.posts).map((item: any) => {
         const endDateExclusive = item.end_date
-          ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+          ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
           : undefined
         return {
           id: item.posts.id, title: item.posts.title, content: item.posts.content,
@@ -484,25 +484,25 @@ export default function Home() {
 
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,end_date,category)')
-      .eq('user_id', uid).neq('status','dismissed').neq('status','accepted')
+      .eq('user_id', uid).neq('status', 'dismissed').neq('status', 'accepted')
     setNotifications(notifData || [])
 
     if (admin) {
-      const { data: pending } = await supabase.from('posts').select('*').eq('status','pending')
+      const { data: pending } = await supabase.from('posts').select('*').eq('status', 'pending')
       setPendingPosts(pending || [])
     }
 
     supabase.channel('notifications-channel')
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
         async (payload) => {
           const { data: n } = await supabase.from('notifications')
             .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
           if (n) {
-            setNotifications(prev => prev.some(x=>x.id===n.id) ? prev : [n, ...prev])
+            setNotifications(prev => prev.some(x => x.id === n.id) ? prev : [n, ...prev])
             sendPush(uid, '📅 새 일정 알림', n.posts?.title ?? '새 일정이 추가됐어요')
           }
         })
-      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` },
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
         (payload) => {
           const s = payload.new.status
           if (s === 'dismissed' || s === 'accepted')
@@ -513,49 +513,49 @@ export default function Home() {
       .subscribe()
 
     supabase.channel('user-calendar-channel')
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'user_calendar', filter:`user_id=eq.${uid}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_calendar', filter: `user_id=eq.${uid}` },
         async (payload) => {
           if (!payload.new.post_id) return
           const { data: p } = await supabase.from('posts')
             .select('id,title,content,category,created_by').eq('id', payload.new.post_id).single()
           if (p) {
             const endDateExclusive = payload.new.end_date
-              ? (() => { const d = new Date(payload.new.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+              ? (() => { const d = new Date(payload.new.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
               : undefined
-            setEvents(prev => prev.some(e=>e.id===p.id) ? prev : [...prev, {
-              id:p.id, title:p.title, content:p.content, category:p.category,
-              created_by:p.created_by,
-              date:payload.new.assigned_date, start:payload.new.assigned_date, end:endDateExclusive,
-              color:getCategoryColor(p.category),
-              backgroundColor:getCategoryColor(p.category),
-              borderColor:getCategoryColor(p.category),
+            setEvents(prev => prev.some(e => e.id === p.id) ? prev : [...prev, {
+              id: p.id, title: p.title, content: p.content, category: p.category,
+              created_by: p.created_by,
+              date: payload.new.assigned_date, start: payload.new.assigned_date, end: endDateExclusive,
+              color: getCategoryColor(p.category),
+              backgroundColor: getCategoryColor(p.category),
+              borderColor: getCategoryColor(p.category),
             }])
           }
         })
       .subscribe()
 
     supabase.channel('teachers-channel')
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'teachers' },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'teachers' },
         (payload) => setTeachers(prev => {
           if (prev.some(t => t.id === payload.new.id)) return prev
-          return [...prev, payload.new as any].sort((a,b) => a.subject.localeCompare(b.subject) || a.name.localeCompare(b.name))
+          return [...prev, payload.new as any].sort((a, b) => a.subject.localeCompare(b.subject) || a.name.localeCompare(b.name))
         }))
-      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'teachers' },
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teachers' },
         (payload) => setTeachers(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t)))
-      .on('postgres_changes', { event:'DELETE', schema:'public', table:'teachers' },
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'teachers' },
         (payload) => setTeachers(prev => prev.filter(t => t.id !== (payload.old as any).id)))
       .subscribe()
 
     if (admin) {
       supabase.channel('posts-channel')
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'posts' },
-          (payload) => { if (payload.new.status==='pending') setPendingPosts(prev=>[payload.new,...prev]) })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'posts' },
-          (payload) => { if (payload.new.status!=='pending') setPendingPosts(prev=>prev.filter(p=>p.id!==payload.new.id)) })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' },
+          (payload) => { if (payload.new.status === 'pending') setPendingPosts(prev => [payload.new, ...prev]) })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' },
+          (payload) => { if (payload.new.status !== 'pending') setPendingPosts(prev => prev.filter(p => p.id !== payload.new.id)) })
         .subscribe()
     } else {
       supabase.channel('posts-approved-channel')
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'posts' },
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' },
           (payload) => {
             if (payload.new.created_by === uid && payload.new.status === 'approved' && payload.new.is_user_generated) {
               setApprovedCount(prev => prev + 1)
@@ -709,16 +709,16 @@ export default function Home() {
     if (admin) {
       const { data } = await supabase.from('messages')
         .select('*, teachers(name,subject)')
-        .eq('status','pending').order('created_at', { ascending: false })
+        .eq('status', 'pending').order('created_at', { ascending: false })
 
-      const enriched = await Promise.all((data||[]).map(async (m: any) => {
+      const enriched = await Promise.all((data || []).map(async (m: any) => {
         const { data: s } = await supabase.from('users').select('name').eq('id', m.sender_id).single()
         return { ...m, senderName: s?.name ?? '알 수 없음' }
       }))
       setPendingMessages(enriched)
 
       supabase.channel('messages-admin-channel')
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' },
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
           async (payload) => {
             if (payload.new.status !== 'pending') return
             const { data: m } = await supabase.from('messages')
@@ -728,7 +728,7 @@ export default function Home() {
               setPendingMessages(prev => [{ ...m, senderName: s?.name ?? '알 수 없음' }, ...prev])
             }
           })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' },
           (payload) => {
             if (payload.new.status !== 'pending')
               setPendingMessages(prev => prev.filter(m => m.id !== payload.new.id))
@@ -739,17 +739,17 @@ export default function Home() {
     if (teacher && myT) {
       const { data } = await supabase.from('messages')
         .select('*')
-        .eq('teacher_id', myT.id).eq('status','approved')
+        .eq('teacher_id', myT.id).eq('status', 'approved')
         .order('created_at', { ascending: false })
 
-      const enriched = await Promise.all((data||[]).map(async (m: any) => {
+      const enriched = await Promise.all((data || []).map(async (m: any) => {
         const { data: s } = await supabase.from('users').select('name').eq('id', m.sender_id).single()
         return { ...m, senderName: s?.name ?? '알 수 없음' }
       }))
       setMyMessages(enriched)
 
       supabase.channel('messages-teacher-channel')
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' },
           async (payload) => {
             if (payload.new.teacher_id !== myT.id) return
             if (payload.new.status === 'approved') {
@@ -772,19 +772,19 @@ export default function Home() {
       const { data } = await supabase.from('messages')
         .select('*, teachers(name,subject)')
         .eq('sender_id', uid)
-        .in('status', ['approved','pending','rejected'])
+        .in('status', ['approved', 'pending', 'rejected'])
         .order('created_at', { ascending: false })
       setSentMessages(data || [])
 
       supabase.channel('messages-sent-channel')
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' },
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
           async (payload) => {
             if (payload.new.sender_id !== uid) return
             const { data: m } = await supabase.from('messages')
               .select('*, teachers(name,subject)').eq('id', payload.new.id).single()
-            if (m) setSentMessages(prev => prev.some(x=>x.id===m.id) ? prev : [m, ...prev])
+            if (m) setSentMessages(prev => prev.some(x => x.id === m.id) ? prev : [m, ...prev])
           })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' },
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' },
           async (payload) => {
             if (payload.new.sender_id !== uid) return
             const { data: m } = await supabase.from('messages')
@@ -808,8 +808,8 @@ export default function Home() {
 
   // ── 선생님 관리 ───────────────────────────────────────────────
   const resetTeacherForm = () => { setTeacherName(''); setTeacherSubject(SUBJECTS[0]); setTeacherLocation(''); setEditingTeacher(null) }
-  const openAddTeacher   = () => { resetTeacherForm(); setShowTeacherForm(true) }
-  const openEditTeacher  = (t: any) => { setEditingTeacher(t); setTeacherName(t.name); setTeacherSubject(t.subject); setTeacherLocation(t.location); setShowTeacherForm(true) }
+  const openAddTeacher = () => { resetTeacherForm(); setShowTeacherForm(true) }
+  const openEditTeacher = (t: any) => { setEditingTeacher(t); setTeacherName(t.name); setTeacherSubject(t.subject); setTeacherLocation(t.location); setShowTeacherForm(true) }
 
   const submitTeacher = async () => {
     if (!teacherName.trim() || !teacherLocation.trim()) { showToast('성함과 위치를 입력해주세요!', 'error'); return }
@@ -954,8 +954,8 @@ export default function Home() {
     const now = new Date()
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000)
     if (diff < 60) return '방금'
-    if (diff < 3600) return `${Math.floor(diff/60)}분 전`
-    if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`
+    if (diff < 3600) return `${Math.floor(diff / 60)}분 전`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`
     return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
   }
 
@@ -998,7 +998,7 @@ export default function Home() {
     setShowTeacherPicker(true)
   }
 
-  const login  = async () => supabase.auth.signInWithOAuth({ provider:'google', options:{ skipBrowserRedirect:false, queryParams:{ prompt:'select_account' } } })
+  const login = async () => supabase.auth.signInWithOAuth({ provider: 'google', options: { skipBrowserRedirect: false, queryParams: { prompt: 'select_account' } } })
   const logout = async () => {
     supabase.removeAllChannels()
     await supabase.auth.signOut()
@@ -1009,9 +1009,9 @@ export default function Home() {
     const { data: schoolPosts } = await supabase.from('posts')
       .select('id, title, content, category, default_date, end_date')
       .eq('status', 'approved').in('category', ['학교행사', '휴일'])
-    const schoolEvents = (schoolPosts||[]).map((p: any) => {
+    const schoolEvents = (schoolPosts || []).map((p: any) => {
       const endExclusive = p.end_date
-        ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })()
+        ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
         : undefined
       return {
         id: p.id, title: p.title, content: p.content, category: p.category,
@@ -1027,12 +1027,9 @@ export default function Home() {
 
   const sendPush = async (userId: string, title: string, body: string, url = '/') => {
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+      await fetch(`/api/send-push`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, title, body, url }),
       })
     } catch (e) {
@@ -1079,7 +1076,7 @@ export default function Home() {
   const submitPost = async () => {
     if (!user || !selectedDate || !popupTitle) { showToast('제목을 입력해주세요!', 'error'); return }
     const endDate = popupDateType === 'range' && popupEndDate ? popupEndDate : null
-    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })() : undefined
 
     if (popupIsPersonal) {
       const { data: calData, error } = await supabase.from('user_calendar').insert({
@@ -1087,10 +1084,12 @@ export default function Home() {
         title: popupTitle, content: popupContent, color: popupColor, is_personal: true,
       }).select().single()
       if (error) { showToast(error.message, 'error'); return }
-      const ev = { id: calData.id, cal_id: calData.id, title: popupTitle, content: popupContent,
+      const ev = {
+        id: calData.id, cal_id: calData.id, title: popupTitle, content: popupContent,
         category: '개인', date: selectedDate, start: selectedDate, end: endExclusive,
-        is_personal: true, color: popupColor, backgroundColor: popupColor, borderColor: popupColor }
-      setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
+        is_personal: true, color: popupColor, backgroundColor: popupColor, borderColor: popupColor
+      }
+      setEvents(prev => [...prev, ev]); setSelectedDateEvents(prev => [...prev, ev])
       setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupDateType('single'); setPopupEndDate(''); setPopupIsPersonal(false); setPopupColor('#f59e0b')
       showToast('개인 일정이 추가됐어요!')
       return
@@ -1102,12 +1101,12 @@ export default function Home() {
     const status = isTeacher ? 'approved' : 'pending'
 
     const { data: postData, error } = await supabase.from('posts').insert({
-      title:popupTitle, content:popupContent, status, created_by:user.id,
-      default_date:selectedDate, end_date:endDate, category:popupCategory, grade:targetGrade, is_user_generated:true,
+      title: popupTitle, content: popupContent, status, created_by: user.id,
+      default_date: selectedDate, end_date: endDate, category: popupCategory, grade: targetGrade, is_user_generated: true,
     }).select().single()
     if (error) { showToast(error.message, 'error'); return }
 
-    await supabase.from('user_calendar').insert({ user_id:user.id, post_id:postData.id, assigned_date:selectedDate, end_date:endDate })
+    await supabase.from('user_calendar').insert({ user_id: user.id, post_id: postData.id, assigned_date: selectedDate, end_date: endDate })
 
     if (isTeacher) {
       const { data: targetUsers } = await supabase.from('users').select('id')
@@ -1119,8 +1118,8 @@ export default function Home() {
       }
     }
 
-    const ev = { id:postData.id, title:popupTitle, content:popupContent, category:popupCategory, date:selectedDate, start:selectedDate, end:endExclusive, color:getCategoryColor(popupCategory), backgroundColor:getCategoryColor(popupCategory), borderColor:getCategoryColor(popupCategory) }
-    setEvents(prev=>[...prev,ev]); setSelectedDateEvents(prev=>[...prev,ev])
+    const ev = { id: postData.id, title: popupTitle, content: popupContent, category: popupCategory, date: selectedDate, start: selectedDate, end: endExclusive, color: getCategoryColor(popupCategory), backgroundColor: getCategoryColor(popupCategory), borderColor: getCategoryColor(popupCategory) }
+    setEvents(prev => [...prev, ev]); setSelectedDateEvents(prev => [...prev, ev])
     setShowAddForm(false); setPopupTitle(''); setPopupContent(''); setPopupDateType('single'); setPopupEndDate(''); setPopupIsPersonal(false)
     if (isTeacher) showToast('일정이 등록됐어요! 해당 학년 학생들에게 알림이 전송됐어요.')
   }
@@ -1130,22 +1129,22 @@ export default function Home() {
     if (schoolEventDateType === 'range' && !schoolEventEndDate) { showToast('종료 날짜를 입력해주세요!', 'error'); return }
     const endDate = schoolEventDateType === 'range' ? schoolEventEndDate : null
     const { data: postData, error } = await supabase.from('posts').insert({
-      title:schoolEventTitle, content:schoolEventContent, status:'approved', created_by:user.id,
-      default_date:schoolEventDate, end_date:endDate, category:schoolEventType, grade:schoolEventGrade, is_user_generated:false,
+      title: schoolEventTitle, content: schoolEventContent, status: 'approved', created_by: user.id,
+      default_date: schoolEventDate, end_date: endDate, category: schoolEventType, grade: schoolEventGrade, is_user_generated: false,
     }).select().single()
     if (error) { showToast(error.message, 'error'); return }
     let q = supabase.from('users').select('id')
     if (schoolEventGrade) q = q.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await q
     if (targetUsers?.length)
-      await supabase.from('user_calendar').insert(targetUsers.map(u=>({ user_id:u.id, post_id:postData.id, assigned_date:schoolEventDate, end_date:endDate })))
-    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
-    setEvents(prev=>[...prev,{
-      id:postData.id, title:schoolEventTitle, content:schoolEventContent, category:schoolEventType,
-      date:schoolEventDate, start:schoolEventDate, end:endExclusive,
-      color:getCategoryColor(schoolEventType),
-      backgroundColor:getCategoryColor(schoolEventType),
-      borderColor:getCategoryColor(schoolEventType),
+      await supabase.from('user_calendar').insert(targetUsers.map(u => ({ user_id: u.id, post_id: postData.id, assigned_date: schoolEventDate, end_date: endDate })))
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })() : undefined
+    setEvents(prev => [...prev, {
+      id: postData.id, title: schoolEventTitle, content: schoolEventContent, category: schoolEventType,
+      date: schoolEventDate, start: schoolEventDate, end: endExclusive,
+      color: getCategoryColor(schoolEventType),
+      backgroundColor: getCategoryColor(schoolEventType),
+      borderColor: getCategoryColor(schoolEventType),
     }])
     setShowSchoolEventForm(false); resetSchoolEventForm()
     showToast('학교 일정이 추가됐어요!')
@@ -1165,7 +1164,7 @@ export default function Home() {
     setSchoolEventEndDate(event.end_date || '')
     setSchoolEventDateType(event.end_date ? 'range' : 'single')
     setSchoolEventGrade(event.grade ?? null)
-    setSchoolEventType(event.category as '학교행사'|'휴일')
+    setSchoolEventType(event.category as '학교행사' | '휴일')
     setShowSchoolEventForm(true)
   }
 
@@ -1181,7 +1180,7 @@ export default function Home() {
     if (error) { showToast(error.message, 'error'); return }
     await supabase.from('user_calendar').update({ assigned_date: schoolEventDate, end_date: endDate })
       .eq('post_id', editingSchoolEvent.id)
-    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })() : undefined
     setEvents(prev => prev.map(e => e.id === editingSchoolEvent.id ? {
       ...e, title: schoolEventTitle, content: schoolEventContent,
       date: schoolEventDate, start: schoolEventDate, end: endExclusive,
@@ -1208,7 +1207,7 @@ export default function Home() {
       .update({ assigned_date: editStartDate, end_date: endDate })
       .eq('user_id', user.id).eq('post_id', editingEvent.id)
     if (error) { showToast(error.message, 'error'); return }
-    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0] })() : undefined
+    const endExclusive = endDate ? (() => { const d = new Date(endDate); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })() : undefined
     setEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, date: editStartDate, start: editStartDate, end: endExclusive } : e))
     setSelectedDateEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, date: editStartDate } : e))
     setShowEditEvent(false); setEditingEvent(null); setEditStartDate(''); setEditEndDate(''); setEditDateType('single')
@@ -1227,16 +1226,16 @@ export default function Home() {
       if (!confirm('이 일정을 삭제할까요?')) return
       await supabase.from('user_calendar').delete().eq('user_id', user.id).eq('post_id', eventId)
     }
-    setEvents(prev=>prev.filter(e=>e.id!==eventId)); setSelectedDateEvents(prev=>prev.filter(e=>e.id!==eventId))
+    setEvents(prev => prev.filter(e => e.id !== eventId)); setSelectedDateEvents(prev => prev.filter(e => e.id !== eventId))
   }
 
   const acceptNotification = (notif: any) => {
     const hasRange = !!notif.posts.end_date
-    setPendingPostId(notif.posts.id); pendingPostTitleRef.current=notif.posts.title
-    pendingNotifIdRef.current=notif.id; pendingDefaultDateRef.current=notif.posts.default_date
-    pendingEndDateRef.current=notif.posts.end_date||null
-    setPickerDate(notif.posts.default_date||'')
-    setPickerEndDate(notif.posts.end_date||'')
+    setPendingPostId(notif.posts.id); pendingPostTitleRef.current = notif.posts.title
+    pendingNotifIdRef.current = notif.id; pendingDefaultDateRef.current = notif.posts.default_date
+    pendingEndDateRef.current = notif.posts.end_date || null
+    setPickerDate(notif.posts.default_date || '')
+    setPickerEndDate(notif.posts.end_date || '')
     setPickerDateType(hasRange ? 'range' : 'single')
     setShowNotifications(false); setShowDatePicker(true)
   }
@@ -1246,55 +1245,55 @@ export default function Home() {
     if (pickerDateType === 'range' && !pickerEndDate) { showToast('종료 날짜를 선택해주세요!', 'error'); return }
     const endDate = pickerDateType === 'range' ? pickerEndDate : null
     const { error } = await supabase.from('user_calendar')
-      .upsert({ user_id:user.id, post_id:pendingPostId!, assigned_date:pickerDate, end_date:endDate }, { onConflict:'user_id,post_id' })
+      .upsert({ user_id: user.id, post_id: pendingPostId!, assigned_date: pickerDate, end_date: endDate }, { onConflict: 'user_id,post_id' })
     if (error) { showToast(error.message, 'error'); return }
     if (pendingNotifIdRef.current)
-      await supabase.from('notifications').update({ status:'accepted', is_read:true }).eq('id', pendingNotifIdRef.current)
-    setNotifications(prev=>prev.filter(n=>n.id!==pendingNotifIdRef.current))
-    setPendingPostId(null); pendingPostTitleRef.current=null; pendingNotifIdRef.current=null; pendingDefaultDateRef.current=null; pendingEndDateRef.current=null
+      await supabase.from('notifications').update({ status: 'accepted', is_read: true }).eq('id', pendingNotifIdRef.current)
+    setNotifications(prev => prev.filter(n => n.id !== pendingNotifIdRef.current))
+    setPendingPostId(null); pendingPostTitleRef.current = null; pendingNotifIdRef.current = null; pendingDefaultDateRef.current = null; pendingEndDateRef.current = null
     setShowDatePicker(false); setPickerDate(''); setPickerEndDate(''); setPickerDateType('single')
   }
 
   const cancelDatePicker = () => {
-    setPendingPostId(null); pendingPostTitleRef.current=null; pendingNotifIdRef.current=null; pendingDefaultDateRef.current=null; pendingEndDateRef.current=null
+    setPendingPostId(null); pendingPostTitleRef.current = null; pendingNotifIdRef.current = null; pendingDefaultDateRef.current = null; pendingEndDateRef.current = null
     setShowDatePicker(false); setPickerDate(''); setPickerEndDate(''); setPickerDateType('single')
   }
 
   const holdNotification = async (notif: any) => {
-    await supabase.from('notifications').update({ status:'held' }).eq('id',notif.id)
-    setNotifications(prev=>prev.map(n=>n.id===notif.id?{...n,status:'held'}:n))
+    await supabase.from('notifications').update({ status: 'held' }).eq('id', notif.id)
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, status: 'held' } : n))
     setNotifTab('held')
   }
 
   const dismissNotification = async (notif: any) => {
-    await supabase.from('notifications').update({ status:'dismissed', is_read:true }).eq('id',notif.id)
-    await supabase.from('user_actions').insert({ user_id:user.id, post_id:notif.posts.id, action:'dismissed' })
-    setNotifications(prev=>prev.filter(n=>n.id!==notif.id))
+    await supabase.from('notifications').update({ status: 'dismissed', is_read: true }).eq('id', notif.id)
+    await supabase.from('user_actions').insert({ user_id: user.id, post_id: notif.posts.id, action: 'dismissed' })
+    setNotifications(prev => prev.filter(n => n.id !== notif.id))
   }
 
   const approvePost = async (postId: string) => {
-    const { error } = await supabase.from('posts').update({ status:'approved' }).eq('id',postId)
+    const { error } = await supabase.from('posts').update({ status: 'approved' }).eq('id', postId)
     if (error) { showToast(error.message, 'error'); return }
-    setPendingPosts(prev=>prev.filter(p=>p.id!==postId))
+    setPendingPosts(prev => prev.filter(p => p.id !== postId))
   }
   const rejectPost = async (postId: string) => {
-    await supabase.from('posts').update({ status:'rejected' }).eq('id',postId)
-    setPendingPosts(prev=>prev.filter(p=>p.id!==postId))
+    await supabase.from('posts').update({ status: 'rejected' }).eq('id', postId)
+    setPendingPosts(prev => prev.filter(p => p.id !== postId))
   }
 
   // ── 파생 상태 ──────────────────────────────────────────────────
-  const displayName         = user?.user_metadata?.full_name?.split(' ')[0] ?? ''
-  const activeNotifications = notifications.filter(n=>n.status==='pending')
-  const heldNotifications   = notifications.filter(n=>n.status==='held')
-  const badgeCount          = activeNotifications.length
+  const displayName = user?.user_metadata?.full_name?.split(' ')[0] ?? ''
+  const activeNotifications = notifications.filter(n => n.status === 'pending')
+  const heldNotifications = notifications.filter(n => n.status === 'held')
+  const badgeCount = activeNotifications.length
 
   const overlayClass = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in"
-  const sheetClass   = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
+  const sheetClass = "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up"
   const LOGIN_REQUIRED = "로그인 후 이용할 수 있어요"
 
-  const CATEGORY_BADGE: Record<string,string> = {
-    '수행평가':'bg-blue-100 text-blue-700','학교행사':'bg-green-100 text-green-700',
-    '휴일':'bg-red-100 text-red-600','기타':'bg-purple-100 text-purple-700','개인':'bg-yellow-100 text-yellow-700',
+  const CATEGORY_BADGE: Record<string, string> = {
+    '수행평가': 'bg-blue-100 text-blue-700', '학교행사': 'bg-green-100 text-green-700',
+    '휴일': 'bg-red-100 text-red-600', '기타': 'bg-purple-100 text-purple-700', '개인': 'bg-yellow-100 text-yellow-700',
   }
 
   const HoverTooltipUI = hoverTooltip ? (
@@ -1312,7 +1311,7 @@ export default function Home() {
             </span>
             <div className="flex items-center gap-1 flex-wrap mt-0.5">
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {(ev.title||'').replace(/^\[\d학년\] /,'')}
+                {(ev.title || '').replace(/^\[\d학년\] /, '')}
               </p>
               {ev.grade && <span className="text-xs text-gray-400">({ev.grade}학년)</span>}
             </div>
@@ -1329,8 +1328,8 @@ export default function Home() {
 
   const toastColors = {
     success: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900',
-    error:   'bg-red-500 text-white',
-    info:    'bg-blue-500 text-white',
+    error: 'bg-red-500 text-white',
+    info: 'bg-blue-500 text-white',
   }
 
   const ToastUI = toast ? (
@@ -1347,19 +1346,19 @@ export default function Home() {
         <h1 className="text-xl font-bold mb-1">👩‍🏫 본인 확인</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">목록에서 본인이 누구인지 선택해주세요</p>
         {teachers.length === 0
-          ? <p className="text-sm text-gray-400 text-center mt-16">등록된 선생님이 없어요.<br/>관리자에게 문의해주세요.</p>
+          ? <p className="text-sm text-gray-400 text-center mt-16">등록된 선생님이 없어요.<br />관리자에게 문의해주세요.</p>
           : <div className="flex flex-col gap-2">
-              {teachers.map(t => (
-                <button key={t.id} onClick={() => selectMyTeacher(t)}
-                  className="btn w-full p-4 border border-gray-200 dark:border-gray-700 rounded-xl text-left flex items-center justify-between hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                  <div>
-                    <p className="font-semibold">{t.name} 선생님</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.subject} · 📍 {t.location}</p>
-                  </div>
-                  <span className="text-blue-400 text-lg">→</span>
-                </button>
-              ))}
-            </div>
+            {teachers.map(t => (
+              <button key={t.id} onClick={() => selectMyTeacher(t)}
+                className="btn w-full p-4 border border-gray-200 dark:border-gray-700 rounded-xl text-left flex items-center justify-between hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                <div>
+                  <p className="font-semibold">{t.name} 선생님</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.subject} · 📍 {t.location}</p>
+                </div>
+                <span className="text-blue-400 text-lg">→</span>
+              </button>
+            ))}
+          </div>
         }
       </div>
     )
@@ -1372,7 +1371,7 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📅 학교 캘린더</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm">학년을 선택해주세요</p>
         <div className="flex flex-col gap-3 w-full max-w-xs">
-          {[1,2,3].map(g => (
+          {[1, 2, 3].map(g => (
             <button key={g} onClick={() => selectGrade(g)}
               className="btn py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-lg font-bold shadow-md shadow-blue-200 dark:shadow-blue-900/30">
               {g}학년
@@ -1435,14 +1434,14 @@ export default function Home() {
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{tutorialSteps[tutorialStep].desc}</p>
               <div className="flex gap-2 mt-6">
                 {tutorialStep > 0 && (
-                  <button onClick={() => setTutorialStep(s => s-1)}
+                  <button onClick={() => setTutorialStep(s => s - 1)}
                     className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">
                     이전
                   </button>
                 )}
                 <button onClick={() => {
                   if (tutorialStep < tutorialSteps.length - 1) {
-                    setTutorialStep(s => s+1)
+                    setTutorialStep(s => s + 1)
                   } else {
                     setShowTutorial(false)
                     localStorage.setItem(`tutorial_done_${user.id}`, '1')
@@ -1479,7 +1478,7 @@ export default function Home() {
               <button onClick={() => setShowIOSInstall(false)} className="text-gray-400 text-lg leading-none">×</button>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-              아래 <span className="font-bold text-blue-500">공유 버튼 □↑</span>을 탭한 후<br/>
+              아래 <span className="font-bold text-blue-500">공유 버튼 □↑</span>을 탭한 후<br />
               <span className="font-bold">"홈 화면에 추가"</span>를 선택해주세요
             </div>
             <div className="flex justify-center mt-2">
@@ -1537,11 +1536,11 @@ export default function Home() {
             <div className="md:w-64 md:border-r md:border-gray-200 md:dark:border-gray-700 md:min-h-screen md:p-3">
               <div className="hidden md:flex md:flex-col md:gap-1 md:mt-3">
                 <button onClick={() => setActiveTab('calendar')}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab==='calendar'?'bg-blue-50 dark:bg-blue-900/30 text-blue-500':'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab === 'calendar' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                   <span className="text-lg">📅</span>캘린더
                 </button>
                 <button onClick={() => setActiveTab('teacher')}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab==='teacher'?'bg-blue-50 dark:bg-blue-900/30 text-blue-500':'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab === 'teacher' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                   <span className="text-lg">🏫</span>선생님 위치
                 </button>
               </div>
@@ -1587,50 +1586,50 @@ export default function Home() {
                   </div>
                   {teachers.length === 0
                     ? <div className="flex flex-col items-center justify-center h-48 gap-3 text-gray-400 dark:text-gray-500">
-                        <p className="text-4xl">🏫</p>
-                        <p className="text-sm">등록된 선생님이 없어요</p>
-                      </div>
+                      <p className="text-4xl">🏫</p>
+                      <p className="text-sm">등록된 선생님이 없어요</p>
+                    </div>
                     : <div className="flex flex-col">
-                        {Object.entries(teachers.reduce((acc, t) => {
-                          if (!acc[t.subject]) acc[t.subject] = []
-                          acc[t.subject].push(t); return acc
-                        }, {} as Record<string, any[]>)).map(([subject, list]) => {
-                          const isOpen = openSubjects.has(subject)
-                          return (
-                            <div key={subject} className="border-b border-gray-200 dark:border-gray-700">
-                              <button onClick={() => toggleSubject(subject)}
-                                className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{subject}</p>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">{(list as any[]).length}명</span>
-                                </div>
-                                <span className={`text-gray-400 text-xs transition-transform duration-200 ${isOpen?'rotate-180':''}`}>▼</span>
-                              </button>
-                              {isOpen && (
-                                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                                  {(list as any[]).map(t => (
-                                    <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white dark:bg-gray-950">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <p className="text-base font-semibold">{maskTeacherName(t.name)} 선생님</p>
-                                          {t.user_id && <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">인증됨</span>}
-                                        </div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
+                      {Object.entries(teachers.reduce((acc, t) => {
+                        if (!acc[t.subject]) acc[t.subject] = []
+                        acc[t.subject].push(t); return acc
+                      }, {} as Record<string, any[]>)).map(([subject, list]) => {
+                        const isOpen = openSubjects.has(subject)
+                        return (
+                          <div key={subject} className="border-b border-gray-200 dark:border-gray-700">
+                            <button onClick={() => toggleSubject(subject)}
+                              className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 transition-colors">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{subject}</p>
+                                <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">{(list as any[]).length}명</span>
+                              </div>
+                              <span className={`text-gray-400 text-xs transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                            </button>
+                            {isOpen && (
+                              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {(list as any[]).map(t => (
+                                  <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white dark:bg-gray-950">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <p className="text-base font-semibold">{maskTeacherName(t.name)} 선생님</p>
+                                        {t.user_id && <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">인증됨</span>}
                                       </div>
-                                      {t.user_id && (
-                                        <button onClick={() => showToast('로그인 후 이용할 수 있어요 😊', 'info')}
-                                          className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
-                                          💬 메시지
-                                        </button>
-                                      )}
+                                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
                                     </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
+                                    {t.user_id && (
+                                      <button onClick={() => showToast('로그인 후 이용할 수 있어요 😊', 'info')}
+                                        className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
+                                        💬 메시지
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   }
                 </div>
               )}
@@ -1640,11 +1639,11 @@ export default function Home() {
           {/* 모바일 하단 탭 (비로그인) */}
           <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden z-30">
             <button onClick={() => setActiveTab('calendar')}
-              className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab==='calendar'?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
+              className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab === 'calendar' ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`}>
               <span className="text-xl">📅</span>캘린더
             </button>
             <button onClick={() => setActiveTab('teacher')}
-              className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab==='teacher'?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
+              className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab === 'teacher' ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`}>
               <span className="text-xl">🏫</span>선생님 위치
             </button>
           </div>
@@ -1657,14 +1656,14 @@ export default function Home() {
                 {selectedDateEvents.length === 0
                   ? <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">이날 학교 일정이 없어요</p>
                   : <div className="mb-3 flex flex-col gap-2">
-                      {selectedDateEvents.map(event => (
-                        <div key={event.id} className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
-                          <p className="font-medium text-sm mt-0.5">{event.title}</p>
-                          {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
-                        </div>
-                      ))}
-                    </div>
+                    {selectedDateEvents.map(event => (
+                      <div key={event.id} className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
+                        <p className="font-medium text-sm mt-0.5">{event.title}</p>
+                        {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
+                      </div>
+                    ))}
+                  </div>
                 }
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl mb-3">
                   <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">🔒 수행평가·기타 일정</p>
@@ -1689,7 +1688,7 @@ export default function Home() {
                 <p className="text-sm font-bold truncate">{displayName}</p>
                 <div className="flex flex-wrap items-center gap-1 mt-0.5">
                   {userGrade && <span className="text-xs text-gray-400 dark:text-gray-500">{userGrade}학년</span>}
-                  {isAdmin   && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
+                  {isAdmin && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
                   {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name} 선생님</span>}
                   {!isAdmin && approvedCount > 0 && (
                     <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">⭐ 일정 승인 {approvedCount}회</span>
@@ -1738,7 +1737,7 @@ export default function Home() {
 
             {/* PC 사이드 탭 */}
             <div className="hidden md:flex md:flex-col md:p-3 md:gap-1">
-              {(['calendar','board','teacher'] as Tab[]).map(tab => (
+              {(['calendar', 'board', 'teacher'] as Tab[]).map(tab => (
                 <button key={tab} onClick={() => {
                   if (tab === 'board') {
                     loadBoardPosts(userGrade ?? boardGrade)
@@ -1746,9 +1745,9 @@ export default function Home() {
                   }
                   setActiveTab(tab)
                 }}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab===tab ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                  <span className="text-lg">{tab==='calendar'?'📅': tab==='board'?'📋':'🏫'}</span>
-                  {tab==='calendar'?'캘린더': tab==='board'?'게시판':'선생님 위치'}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab === tab ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  <span className="text-lg">{tab === 'calendar' ? '📅' : tab === 'board' ? '📋' : '🏫'}</span>
+                  {tab === 'calendar' ? '캘린더' : tab === 'board' ? '게시판' : '선생님 위치'}
                 </button>
               ))}
             </div>
@@ -1791,7 +1790,7 @@ export default function Home() {
                               <p className="text-sm">{m.content}</p>
                               <div className="flex gap-2 mt-2">
                                 <button onClick={() => approveMessage(m.id)} className="btn flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow-sm">승인</button>
-                                <button onClick={() => rejectMessage(m.id)}  className="btn flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow-sm">거절</button>
+                                <button onClick={() => rejectMessage(m.id)} className="btn flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow-sm">거절</button>
                               </div>
                             </div>
                           ))}
@@ -1812,7 +1811,7 @@ export default function Home() {
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">날짜: {post.default_date}</p>
                             <div className="flex gap-2 mt-2">
                               <button onClick={() => approvePost(post.id)} className="btn flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow-sm">승인</button>
-                              <button onClick={() => rejectPost(post.id)}  className="btn flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow-sm">거절</button>
+                              <button onClick={() => rejectPost(post.id)} className="btn flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow-sm">거절</button>
                             </div>
                           </div>
                         ))
@@ -1836,7 +1835,7 @@ export default function Home() {
                 <div className="flex flex-col min-h-screen">
                   {/* 학년 선택 */}
                   <div className="flex gap-1.5 px-3 pt-4 pb-2 md:px-6 sticky top-0 bg-white dark:bg-gray-950 z-10 border-b border-gray-100 dark:border-gray-800">
-                    {[1,2,3].map(g => (
+                    {[1, 2, 3].map(g => (
                       <button key={g} onClick={() => setBoardGrade(g)}
                         className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${boardGrade === g ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                         {g}학년
@@ -1850,27 +1849,27 @@ export default function Home() {
                       ? <div className="flex justify-center py-12 text-gray-300 dark:text-gray-600 text-3xl animate-pulse">⏳</div>
                       : boardPosts.length === 0
                         ? <div className="flex flex-col items-center justify-center h-48 gap-2 text-gray-400 dark:text-gray-500">
-                            <p className="text-3xl">📭</p>
-                            <p className="text-sm">아직 글이 없어요. 첫 글을 작성해보세요!</p>
-                          </div>
+                          <p className="text-3xl">📭</p>
+                          <p className="text-sm">아직 글이 없어요. 첫 글을 작성해보세요!</p>
+                        </div>
                         : boardPosts.map(post => (
-                            <button key={post.id} onClick={() => openBoardPost(post)}
-                              className="card-hover w-full text-left p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
-                              <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">{post.title}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{post.content}</p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs text-gray-400 dark:text-gray-500">익명</span>
-                                <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">{formatBoardDate(post.created_at)}</span>
-                                {(post.board_comments?.[0]?.count ?? 0) > 0 && (
-                                  <>
-                                    <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
-                                    <span className="text-xs text-blue-400 dark:text-blue-500">💬 {post.board_comments[0].count}</span>
-                                  </>
-                                )}
-                              </div>
-                            </button>
-                          ))
+                          <button key={post.id} onClick={() => openBoardPost(post)}
+                            className="card-hover w-full text-left p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
+                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">{post.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{post.content}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs text-gray-400 dark:text-gray-500">익명</span>
+                              <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500">{formatBoardDate(post.created_at)}</span>
+                              {(post.board_comments?.[0]?.count ?? 0) > 0 && (
+                                <>
+                                  <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                                  <span className="text-xs text-blue-400 dark:text-blue-500">💬 {post.board_comments[0].count}</span>
+                                </>
+                              )}
+                            </div>
+                          </button>
+                        ))
                     }
                   </div>
 
@@ -1913,62 +1912,62 @@ export default function Home() {
 
                   {teachers.length === 0
                     ? <div className="flex flex-col items-center justify-center h-48 gap-3 text-gray-400 dark:text-gray-500">
-                        <p className="text-4xl">🏫</p>
-                        <p className="text-sm">등록된 선생님이 없어요</p>
-                      </div>
+                      <p className="text-4xl">🏫</p>
+                      <p className="text-sm">등록된 선생님이 없어요</p>
+                    </div>
                     : <div className="flex flex-col">
-                        {Object.entries(teachersBySubject).map(([subject, list]) => {
-                          const isOpen = openSubjects.has(subject)
-                          return (
-                            <div key={subject} className="border-b border-gray-200 dark:border-gray-700">
-                              <button onClick={() => toggleSubject(subject)}
-                                className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{subject}</p>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">
-                                    {(list as any[]).length}명
-                                  </span>
-                                </div>
-                                <span className={`text-gray-400 text-xs transition-transform duration-200 ${isOpen?'rotate-180':''}`}>▼</span>
-                              </button>
+                      {Object.entries(teachersBySubject).map(([subject, list]) => {
+                        const isOpen = openSubjects.has(subject)
+                        return (
+                          <div key={subject} className="border-b border-gray-200 dark:border-gray-700">
+                            <button onClick={() => toggleSubject(subject)}
+                              className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{subject}</p>
+                                <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">
+                                  {(list as any[]).length}명
+                                </span>
+                              </div>
+                              <span className={`text-gray-400 text-xs transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                            </button>
 
-                              {isOpen && (
-                                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                                  {(list as any[]).map(t => (
-                                    <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white dark:bg-gray-950">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <p className="text-base font-semibold">{t.name} 선생님</p>
-                                          {t.user_id && (
-                                            <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">인증됨</span>
-                                          )}
-                                        </div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
-                                      </div>
-                                      <div className="flex gap-2 shrink-0">
-                                        {t.user_id && !(isTeacher && myTeacherRow?.id === t.id) && (
-                                          <button onClick={() => openMsgForm(t)}
-                                            className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
-                                            💬 메시지
-                                          </button>
-                                        )}
-                                        {isAdmin && (
-                                          <>
-                                            <button onClick={() => openEditTeacher(t)}
-                                              className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">수정</button>
-                                            <button onClick={() => deleteTeacher(t.id)}
-                                              className="btn text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-400 rounded-lg">삭제</button>
-                                          </>
+                            {isOpen && (
+                              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {(list as any[]).map(t => (
+                                  <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white dark:bg-gray-950">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <p className="text-base font-semibold">{t.name} 선생님</p>
+                                        {t.user_id && (
+                                          <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">인증됨</span>
                                         )}
                                       </div>
+                                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
                                     </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
+                                    <div className="flex gap-2 shrink-0">
+                                      {t.user_id && !(isTeacher && myTeacherRow?.id === t.id) && (
+                                        <button onClick={() => openMsgForm(t)}
+                                          className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">
+                                          💬 메시지
+                                        </button>
+                                      )}
+                                      {isAdmin && (
+                                        <>
+                                          <button onClick={() => openEditTeacher(t)}
+                                            className="btn text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg">수정</button>
+                                          <button onClick={() => deleteTeacher(t.id)}
+                                            className="btn text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-400 rounded-lg">삭제</button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   }
                 </div>
               )}
@@ -1976,7 +1975,7 @@ export default function Home() {
 
             {/* 모바일 하단 탭 */}
             <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden z-30">
-              {(['calendar','board','teacher'] as Tab[]).map(tab => (
+              {(['calendar', 'board', 'teacher'] as Tab[]).map(tab => (
                 <button key={tab} onClick={() => {
                   if (tab === 'board') {
                     loadBoardPosts(userGrade ?? boardGrade)
@@ -1984,9 +1983,9 @@ export default function Home() {
                   }
                   setActiveTab(tab)
                 }}
-                  className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab===tab?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
-                  <span className="text-xl">{tab==='calendar'?'📅': tab==='board'?'📋':'🏫'}</span>
-                  {tab==='calendar'?'캘린더': tab==='board'?'게시판':'선생님'}
+                  className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab === tab ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`}>
+                  <span className="text-xl">{tab === 'calendar' ? '📅' : tab === 'board' ? '📋' : '🏫'}</span>
+                  {tab === 'calendar' ? '캘린더' : tab === 'board' ? '게시판' : '선생님'}
                 </button>
               ))}
             </div>
@@ -2039,35 +2038,35 @@ export default function Home() {
                 {boardComments.length === 0
                   ? <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">첫 댓글을 남겨보세요 💬</p>
                   : boardComments.map(c => (
-                      <div key={c.id} className="flex items-start gap-2">
-                        <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">익명</span>
-                              {isAdmin && (
-                                <button onClick={() => fetchBoardAuthor(c.user_id)}
-                                  className="text-xs text-orange-400 underline">확인</button>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-gray-400">{formatBoardDate(c.created_at)}</span>
-                              {(isAdmin || user?.id === c.user_id) && (
-                                <button onClick={() => deleteBoardComment(c.id)}
-                                  className="text-xs text-red-400 hover:text-red-500">🗑</button>
-                              )}
-                            </div>
+                    <div key={c.id} className="flex items-start gap-2">
+                      <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">익명</span>
+                            {isAdmin && (
+                              <button onClick={() => fetchBoardAuthor(c.user_id)}
+                                className="text-xs text-orange-400 underline">확인</button>
+                            )}
                           </div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.content}</p>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-gray-400">{formatBoardDate(c.created_at)}</span>
+                            {(isAdmin || user?.id === c.user_id) && (
+                              <button onClick={() => deleteBoardComment(c.id)}
+                                className="text-xs text-red-400 hover:text-red-500">🗑</button>
+                            )}
+                          </div>
                         </div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.content}</p>
                       </div>
-                    ))
+                    </div>
+                  ))
                 }
               </div>
             </div>
 
             <div className="flex gap-2 mt-3 shrink-0 pt-3 border-t border-gray-100 dark:border-gray-800">
               <input value={boardCommentInput} onChange={e => setBoardCommentInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitBoardComment() }}}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitBoardComment() } }}
                 placeholder="댓글을 입력하세요..." className={`${INPUT} flex-1`} />
               <button onClick={submitBoardComment}
                 className="btn px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium shadow-sm shrink-0">
@@ -2115,9 +2114,9 @@ export default function Home() {
               </p>
             </div>
             <textarea placeholder="선생님께 전할 내용을 입력해주세요" value={msgContent}
-              onChange={e=>setMsgContent(e.target.value)} className={`${INPUT} mb-4`} rows={4} />
+              onChange={e => setMsgContent(e.target.value)} className={`${INPUT} mb-4`} rows={4} />
             <div className="flex gap-2">
-              <button onClick={()=>{setShowMsgForm(false);setMsgContent('')}} className={BTN_GRAY}>취소</button>
+              <button onClick={() => { setShowMsgForm(false); setMsgContent('') }} className={BTN_GRAY}>취소</button>
               <button onClick={submitMessage} className={BTN_BLUE}>전송</button>
             </div>
           </div>
@@ -2131,50 +2130,50 @@ export default function Home() {
             <h3 className="font-bold text-base mb-3">💬 수신된 메시지</h3>
             <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-4">
               <button onClick={() => setInboxTab('unread')}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab==='unread' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                미답장 {myMessages.filter(m=>!m.reply).length > 0 && `(${myMessages.filter(m=>!m.reply).length})`}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab === 'unread' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                미답장 {myMessages.filter(m => !m.reply).length > 0 && `(${myMessages.filter(m => !m.reply).length})`}
               </button>
               <button onClick={() => setInboxTab('replied')}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab==='replied' ? 'bg-gray-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                답장 완료 {myMessages.filter(m=>m.reply).length > 0 && `(${myMessages.filter(m=>m.reply).length})`}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${inboxTab === 'replied' ? 'bg-gray-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                답장 완료 {myMessages.filter(m => m.reply).length > 0 && `(${myMessages.filter(m => m.reply).length})`}
               </button>
             </div>
             {inboxTab === 'unread' && (
-              myMessages.filter(m=>!m.reply).length === 0
+              myMessages.filter(m => !m.reply).length === 0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">미답장 메시지가 없어요</p>
                 : <div className="flex flex-col gap-3">
-                    {myMessages.filter(m=>!m.reply).map(m => (
-                      <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                          {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' })}
-                        </p>
-                        <p className="text-sm mb-2">{m.content}</p>
-                        <button onClick={() => openReplyForm(m)}
-                          className="btn text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                          ↩ 답장하기
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  {myMessages.filter(m => !m.reply).map(m => (
+                    <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                        {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                      </p>
+                      <p className="text-sm mb-2">{m.content}</p>
+                      <button onClick={() => openReplyForm(m)}
+                        className="btn text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        ↩ 답장하기
+                      </button>
+                    </div>
+                  ))}
+                </div>
             )}
             {inboxTab === 'replied' && (
-              myMessages.filter(m=>m.reply).length === 0
+              myMessages.filter(m => m.reply).length === 0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">답장한 메시지가 없어요</p>
                 : <div className="flex flex-col gap-3">
-                    {myMessages.filter(m=>m.reply).map(m => (
-                      <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                          {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' })}
-                        </p>
-                        <p className="text-sm mb-2">{m.content}</p>
-                        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 text-xs text-emerald-700 dark:text-emerald-400">
-                          ↩ {m.reply}
-                        </div>
+                  {myMessages.filter(m => m.reply).map(m => (
+                    <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                        {m.senderName} · {new Date(m.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                      </p>
+                      <p className="text-sm mb-2">{m.content}</p>
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 text-xs text-emerald-700 dark:text-emerald-400">
+                        ↩ {m.reply}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                </div>
             )}
-            <button onClick={()=>setShowMsgInbox(false)}
+            <button onClick={() => setShowMsgInbox(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
         </div>
@@ -2191,9 +2190,9 @@ export default function Home() {
               <p className="text-sm text-gray-700 dark:text-gray-300">{replyTarget.content}</p>
             </div>
             <textarea placeholder="답장 내용을 입력해주세요" value={replyContent}
-              onChange={e=>setReplyContent(e.target.value)} className={`${INPUT} mb-4`} rows={4} />
+              onChange={e => setReplyContent(e.target.value)} className={`${INPUT} mb-4`} rows={4} />
             <div className="flex gap-2">
-              <button onClick={()=>{setShowReplyForm(false);setReplyContent('')}} className={BTN_GRAY}>취소</button>
+              <button onClick={() => { setShowReplyForm(false); setReplyContent('') }} className={BTN_GRAY}>취소</button>
               <button onClick={submitReply} className={BTN_BLUE}>전송</button>
             </div>
           </div>
@@ -2208,40 +2207,39 @@ export default function Home() {
             {sentMessages.length === 0
               ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">보낸 메시지가 없어요</p>
               : <>
-                  <div className="flex flex-col gap-3">
-                    {sentMessages.slice(0, sentPage * PAGE_SIZE).map(m => (
-                      <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs text-gray-400 dark:text-gray-500">
-                            {m.teachers?.name} 선생님 ({m.teachers?.subject}) · {new Date(m.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' })}
-                          </p>
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                            m.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                <div className="flex flex-col gap-3">
+                  {sentMessages.slice(0, sentPage * PAGE_SIZE).map(m => (
+                    <div key={m.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {m.teachers?.name} 선생님 ({m.teachers?.subject}) · {new Date(m.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                        </p>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${m.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
                             m.status === 'rejected' ? 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400' :
-                            'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
                           }`}>
-                            {m.status === 'approved' ? '전달됨' : m.status === 'rejected' ? '거절됨' : '검토중'}
-                          </span>
-                        </div>
-                        <p className="text-sm">{m.content}</p>
-                        {m.reply && (
-                          <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
-                            <p className="text-xs text-blue-400 dark:text-blue-500 mb-0.5">↩ 선생님 답장</p>
-                            <p className="text-sm text-blue-700 dark:text-blue-300">{m.reply}</p>
-                          </div>
-                        )}
+                          {m.status === 'approved' ? '전달됨' : m.status === 'rejected' ? '거절됨' : '검토중'}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                  {sentMessages.length > sentPage * PAGE_SIZE && (
-                    <button onClick={() => setSentPage(p => p + 1)}
-                      className="mt-3 w-full py-2.5 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm">
-                      더 보기 ({sentMessages.length - sentPage * PAGE_SIZE}개 남음)
-                    </button>
-                  )}
-                </>
+                      <p className="text-sm">{m.content}</p>
+                      {m.reply && (
+                        <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+                          <p className="text-xs text-blue-400 dark:text-blue-500 mb-0.5">↩ 선생님 답장</p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">{m.reply}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {sentMessages.length > sentPage * PAGE_SIZE && (
+                  <button onClick={() => setSentPage(p => p + 1)}
+                    className="mt-3 w-full py-2.5 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm">
+                    더 보기 ({sentMessages.length - sentPage * PAGE_SIZE}개 남음)
+                  </button>
+                )}
+              </>
             }
-            <button onClick={()=>{setShowSentMessages(false); setSentPage(1)}}
+            <button onClick={() => { setShowSentMessages(false); setSentPage(1) }}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
         </div>
@@ -2251,13 +2249,13 @@ export default function Home() {
       {showTeacherForm && (
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[85vh] overflow-y-auto`}>
-            <h3 className="font-bold text-base mb-4">{editingTeacher?'✏️ 선생님 수정':'➕ 선생님 추가'}</h3>
+            <h3 className="font-bold text-base mb-4">{editingTeacher ? '✏️ 선생님 수정' : '➕ 선생님 추가'}</h3>
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">과목</p>
               <div className="flex flex-wrap gap-2">
                 {SUBJECTS.map(s => (
                   <button key={s} onClick={() => setTeacherSubject(s)}
-                    className={`btn px-3 py-1.5 rounded-xl text-xs border-2 transition-colors ${teacherSubject===s?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    className={`btn px-3 py-1.5 rounded-xl text-xs border-2 transition-colors ${teacherSubject === s ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {s}
                   </button>
                 ))}
@@ -2265,15 +2263,15 @@ export default function Home() {
             </div>
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">선생님 성함</p>
-              <input placeholder="예: 홍길동" value={teacherName} onChange={e=>setTeacherName(e.target.value)} className={INPUT} />
+              <input placeholder="예: 홍길동" value={teacherName} onChange={e => setTeacherName(e.target.value)} className={INPUT} />
             </div>
             <div className="mb-5">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">교무실 위치</p>
-              <input placeholder="예: 3층 국어 교무실" value={teacherLocation} onChange={e=>setTeacherLocation(e.target.value)} className={INPUT} />
+              <input placeholder="예: 3층 국어 교무실" value={teacherLocation} onChange={e => setTeacherLocation(e.target.value)} className={INPUT} />
             </div>
             <div className="flex gap-2">
-              <button onClick={()=>{setShowTeacherForm(false);resetTeacherForm()}} className={BTN_GRAY}>취소</button>
-              <button onClick={submitTeacher} className={BTN_BLUE}>{editingTeacher?'수정':'추가'}</button>
+              <button onClick={() => { setShowTeacherForm(false); resetTeacherForm() }} className={BTN_GRAY}>취소</button>
+              <button onClick={submitTeacher} className={BTN_BLUE}>{editingTeacher ? '수정' : '추가'}</button>
             </div>
           </div>
         </div>
@@ -2287,31 +2285,31 @@ export default function Home() {
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종류</p>
               <div className="flex gap-2">
-                {([{label:'🏫 학교행사', val:'학교행사'},{label:'🔴 휴일', val:'휴일'}] as const).map(({label,val})=>(
-                  <button key={val} onClick={()=>setSchoolEventType(val)}
-                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                {([{ label: '🏫 학교행사', val: '학교행사' }, { label: '🔴 휴일', val: '휴일' }] as const).map(({ label, val }) => (
+                  <button key={val} onClick={() => setSchoolEventType(val)}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventType === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {label}
                   </button>
                 ))}
               </div>
             </div>
-            <input placeholder="일정 제목" value={schoolEventTitle} onChange={e=>setSchoolEventTitle(e.target.value)} className={`${INPUT} mb-2`} />
-            <textarea placeholder="내용 (선택)" value={schoolEventContent} onChange={e=>setSchoolEventContent(e.target.value)} className={`${INPUT} mb-2`} rows={2} />
+            <input placeholder="일정 제목" value={schoolEventTitle} onChange={e => setSchoolEventTitle(e.target.value)} className={`${INPUT} mb-2`} />
+            <textarea placeholder="내용 (선택)" value={schoolEventContent} onChange={e => setSchoolEventContent(e.target.value)} className={`${INPUT} mb-2`} rows={2} />
             <div className="mb-2">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
               <div className="flex gap-2 mb-2">
-                {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
-                  <button key={val} onClick={()=>{ setSchoolEventDateType(val); if(val==='single') setSchoolEventEndDate('') }}
-                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                {([{ label: '하루', val: 'single' }, { label: '기간', val: 'range' }] as const).map(({ label, val }) => (
+                  <button key={val} onClick={() => { setSchoolEventDateType(val); if (val === 'single') setSchoolEventEndDate('') }}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventDateType === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {label}
                   </button>
                 ))}
               </div>
-              <input type="date" value={schoolEventDate} onChange={e=>setSchoolEventDate(e.target.value)} className={INPUT} />
+              <input type="date" value={schoolEventDate} onChange={e => setSchoolEventDate(e.target.value)} className={INPUT} />
               {schoolEventDateType === 'range' && (
                 <div className="mt-2">
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종료 날짜</p>
-                  <input type="date" value={schoolEventEndDate} onChange={e=>setSchoolEventEndDate(e.target.value)}
+                  <input type="date" value={schoolEventEndDate} onChange={e => setSchoolEventEndDate(e.target.value)}
                     min={schoolEventDate} className={INPUT} />
                 </div>
               )}
@@ -2319,16 +2317,16 @@ export default function Home() {
             <div className="mb-4">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
               <div className="flex gap-2">
-                {[{label:'전체',val:null},{label:'1학년',val:1},{label:'2학년',val:2},{label:'3학년',val:3}].map(({label,val})=>(
-                  <button key={label} onClick={()=>setSchoolEventGrade(val)}
-                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventGrade===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                {[{ label: '전체', val: null }, { label: '1학년', val: 1 }, { label: '2학년', val: 2 }, { label: '3학년', val: 3 }].map(({ label, val }) => (
+                  <button key={label} onClick={() => setSchoolEventGrade(val)}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${schoolEventGrade === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {label}
                   </button>
                 ))}
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={()=>{ setShowSchoolEventForm(false); resetSchoolEventForm() }} className={BTN_GRAY}>취소</button>
+              <button onClick={() => { setShowSchoolEventForm(false); resetSchoolEventForm() }} className={BTN_GRAY}>취소</button>
               <button onClick={editingSchoolEvent ? updateSchoolEvent : submitSchoolEvent} className={BTN_GREEN}>
                 {editingSchoolEvent ? '수정' : '추가'}
               </button>
@@ -2346,25 +2344,25 @@ export default function Home() {
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
               <div className="flex gap-2 mb-3">
-                {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
-                  <button key={val} onClick={()=>{ setEditDateType(val); if(val==='single') setEditEndDate('') }}
-                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${editDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                {([{ label: '하루', val: 'single' }, { label: '기간', val: 'range' }] as const).map(({ label, val }) => (
+                  <button key={val} onClick={() => { setEditDateType(val); if (val === 'single') setEditEndDate('') }}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${editDateType === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {label}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">시작 날짜</p>
-              <input type="date" value={editStartDate} onChange={e=>setEditStartDate(e.target.value)} className={INPUT} />
+              <input type="date" value={editStartDate} onChange={e => setEditStartDate(e.target.value)} className={INPUT} />
               {editDateType === 'range' && (
                 <div className="mt-2">
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종료 날짜</p>
-                  <input type="date" value={editEndDate} onChange={e=>setEditEndDate(e.target.value)}
+                  <input type="date" value={editEndDate} onChange={e => setEditEndDate(e.target.value)}
                     min={editStartDate} className={INPUT} />
                 </div>
               )}
             </div>
             <div className="flex gap-2">
-              <button onClick={()=>setShowEditEvent(false)} className={BTN_GRAY}>취소</button>
+              <button onClick={() => setShowEditEvent(false)} className={BTN_GRAY}>취소</button>
               <button onClick={submitEditEvent} className={BTN_BLUE}>저장</button>
             </div>
           </div>
@@ -2377,17 +2375,17 @@ export default function Home() {
           <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
             <h3 className="font-bold text-base mb-3">🔔 알림</h3>
             <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-4">
-              <button onClick={()=>setNotifTab('active')}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab==='active'?'bg-blue-500 text-white':'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                새 알림{activeNotifications.length>0&&` (${activeNotifications.length})`}
+              <button onClick={() => setNotifTab('active')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab === 'active' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                새 알림{activeNotifications.length > 0 && ` (${activeNotifications.length})`}
               </button>
-              <button onClick={()=>setNotifTab('held')}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab==='held'?'bg-yellow-400 text-white':'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                보류{heldNotifications.length>0&&` (${heldNotifications.length})`}
+              <button onClick={() => setNotifTab('held')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${notifTab === 'held' ? 'bg-yellow-400 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                보류{heldNotifications.length > 0 && ` (${heldNotifications.length})`}
               </button>
             </div>
-            {notifTab==='active' && (
-              activeNotifications.length===0
+            {notifTab === 'active' && (
+              activeNotifications.length === 0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">새 알림이 없어요</p>
                 : activeNotifications.map(notif => (
                   <div key={notif.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl mt-2">
@@ -2396,17 +2394,17 @@ export default function Home() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}{notif.posts.end_date ? ` ~ ${notif.posts.end_date}` : ''}</p>
                     <div className="flex flex-col gap-1.5 mt-2">
-                      <button onClick={()=>acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
+                      <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
                       <div className="flex gap-1.5">
-                        <button onClick={()=>holdNotification(notif)} className="flex-1 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">⏸ 보류</button>
-                        <button onClick={()=>dismissNotification(notif)} className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
+                        <button onClick={() => holdNotification(notif)} className="flex-1 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">⏸ 보류</button>
+                        <button onClick={() => dismissNotification(notif)} className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
                       </div>
                     </div>
                   </div>
                 ))
             )}
-            {notifTab==='held' && (
-              heldNotifications.length===0
+            {notifTab === 'held' && (
+              heldNotifications.length === 0
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">보류된 알림이 없어요</p>
                 : heldNotifications.map(notif => (
                   <div key={notif.id} className="card-hover p-3 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl mt-2">
@@ -2415,13 +2413,13 @@ export default function Home() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}{notif.posts.end_date ? ` ~ ${notif.posts.end_date}` : ''}</p>
                     <div className="flex flex-col gap-1.5 mt-2">
-                      <button onClick={()=>acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
-                      <button onClick={()=>dismissNotification(notif)} className="w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
+                      <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
+                      <button onClick={() => dismissNotification(notif)} className="w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
                     </div>
                   </div>
                 ))
             )}
-            <button onClick={()=>setShowNotifications(false)}
+            <button onClick={() => setShowNotifications(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
           </div>
         </div>
@@ -2436,9 +2434,9 @@ export default function Home() {
             <div className="mb-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
               <div className="flex gap-2">
-                {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
-                  <button key={val} onClick={()=>{ setPickerDateType(val); if(val==='single') setPickerEndDate('') }}
-                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${pickerDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                {([{ label: '하루', val: 'single' }, { label: '기간', val: 'range' }] as const).map(({ label, val }) => (
+                  <button key={val} onClick={() => { setPickerDateType(val); if (val === 'single') setPickerEndDate('') }}
+                    className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${pickerDateType === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {label}
                   </button>
                 ))}
@@ -2447,12 +2445,12 @@ export default function Home() {
             {pendingDefaultDateRef.current && (
               <div className="mb-3">
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">추천 날짜</p>
-                <button onClick={()=>{
+                <button onClick={() => {
                   setPickerDate(pendingDefaultDateRef.current!)
                   if (pickerDateType === 'range' && pendingEndDateRef.current)
                     setPickerEndDate(pendingEndDateRef.current)
                 }}
-                  className={`w-full py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${pickerDate===pendingDefaultDateRef.current?'bg-blue-500 text-white border-blue-500':'bg-white dark:bg-gray-800 text-blue-500 border-blue-300 dark:border-blue-700'}`}>
+                  className={`w-full py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${pickerDate === pendingDefaultDateRef.current ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-gray-800 text-blue-500 border-blue-300 dark:border-blue-700'}`}>
                   {pendingDefaultDateRef.current}
                   {pendingEndDateRef.current && pickerDateType === 'range' && ` ~ ${pendingEndDateRef.current}`}
                   {' (기본 날짜)'}
@@ -2461,11 +2459,11 @@ export default function Home() {
             )}
             <div className="mb-4">
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">시작 날짜</p>
-              <input type="date" value={pickerDate} onChange={e=>setPickerDate(e.target.value)} className={INPUT} />
+              <input type="date" value={pickerDate} onChange={e => setPickerDate(e.target.value)} className={INPUT} />
               {pickerDateType === 'range' && (
                 <div className="mt-2">
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종료 날짜</p>
-                  <input type="date" value={pickerEndDate} onChange={e=>setPickerEndDate(e.target.value)}
+                  <input type="date" value={pickerEndDate} onChange={e => setPickerEndDate(e.target.value)}
                     min={pickerDate} className={INPUT} />
                 </div>
               )}
@@ -2483,43 +2481,43 @@ export default function Home() {
         <div className={overlayClass}>
           <div className={`${sheetClass} max-h-[75vh] overflow-y-auto`}>
             <h3 className="font-bold text-base mb-3">📅 {selectedDate}</h3>
-            {selectedDateEvents.length===0
+            {selectedDateEvents.length === 0
               ? <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">이날 일정이 없어요</p>
               : <div className="mb-3 flex flex-col gap-2">
-                  {selectedDateEvents.map(event => {
-                    const isSchoolEvent = event.category === '학교행사' || event.category === '휴일'
-                    const isPersonal = event.is_personal === true
-                    const isMyEvent = event.created_by === user?.id
-                    const canDelete = isPersonal ? true : isSchoolEvent ? isAdmin : (isMyEvent || isAdmin)
-                    return (
-                      <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
-                            {isAdmin && event.grade && <span className="text-xs text-gray-400 dark:text-gray-500">{event.grade}학년</span>}
-                            {isPersonal && <span className="text-xs text-yellow-500">🔒 나만 보기</span>}
-                          </div>
-                          <p className="font-medium text-sm mt-0.5">{event.title.replace(/^\[\d학년\] /, '')}</p>
-                          {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
+                {selectedDateEvents.map(event => {
+                  const isSchoolEvent = event.category === '학교행사' || event.category === '휴일'
+                  const isPersonal = event.is_personal === true
+                  const isMyEvent = event.created_by === user?.id
+                  const canDelete = isPersonal ? true : isSchoolEvent ? isAdmin : (isMyEvent || isAdmin)
+                  return (
+                    <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
+                          {isAdmin && event.grade && <span className="text-xs text-gray-400 dark:text-gray-500">{event.grade}학년</span>}
+                          {isPersonal && <span className="text-xs text-yellow-500">🔒 나만 보기</span>}
                         </div>
-                        <div className="flex flex-col gap-1 shrink-0">
-                          {isSchoolEvent && isAdmin && (
-                            <button onClick={()=>openEditSchoolEvent(event)}
-                              className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">수정</button>
-                          )}
-                          {!isSchoolEvent && !isPersonal && (
-                            <button onClick={()=>openEditEvent(event)}
-                              className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">기간수정</button>
-                          )}
-                          {canDelete && (
-                            <button onClick={()=>deleteEvent(event.id, isSchoolEvent, isPersonal)}
-                              className="btn text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">삭제</button>
-                          )}
-                        </div>
+                        <p className="font-medium text-sm mt-0.5">{event.title.replace(/^\[\d학년\] /, '')}</p>
+                        {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
                       </div>
-                    )
-                  })}
-                </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        {isSchoolEvent && isAdmin && (
+                          <button onClick={() => openEditSchoolEvent(event)}
+                            className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">수정</button>
+                        )}
+                        {!isSchoolEvent && !isPersonal && (
+                          <button onClick={() => openEditEvent(event)}
+                            className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">기간수정</button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => deleteEvent(event.id, isSchoolEvent, isPersonal)}
+                            className="btn text-red-400 text-xs px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">삭제</button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             }
             {showAddForm ? (
               <>
@@ -2538,7 +2536,7 @@ export default function Home() {
                   <div className="mb-2">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">색상</p>
                     <div className="flex gap-2 flex-wrap">
-                      {['#f59e0b','#ef4444','#3b82f6','#10b981','#8b5cf6','#ec4899','#06b6d4','#64748b'].map(c => (
+                      {['#f59e0b', '#ef4444', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'].map(c => (
                         <button key={c} onClick={() => setPopupColor(c)}
                           className={`w-8 h-8 rounded-full transition-transform ${popupColor === c ? 'scale-125 ring-2 ring-offset-2 ring-gray-400' : ''}`}
                           style={{ backgroundColor: c }} />
@@ -2550,9 +2548,9 @@ export default function Home() {
                     <div className="mb-2">
                       <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">종류</p>
                       <div className="flex gap-2">
-                        {(['수행평가','기타'] as Category[]).map(cat=>(
-                          <button key={cat} onClick={()=>setPopupCategory(cat)}
-                            className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupCategory===cat?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                        {(['수행평가', '기타'] as Category[]).map(cat => (
+                          <button key={cat} onClick={() => setPopupCategory(cat)}
+                            className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupCategory === cat ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                             {cat}
                           </button>
                         ))}
@@ -2562,9 +2560,9 @@ export default function Home() {
                       <div className="mb-2">
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">대상 학년</p>
                         <div className="flex gap-2">
-                          {[1,2,3].map(g=>(
-                            <button key={g} onClick={()=>setPopupGrade(g)}
-                              className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupGrade===g?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                          {[1, 2, 3].map(g => (
+                            <button key={g} onClick={() => setPopupGrade(g)}
+                              className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupGrade === g ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                               {g}학년
                             </button>
                           ))}
@@ -2576,9 +2574,9 @@ export default function Home() {
                 <div className="mb-2">
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">기간</p>
                   <div className="flex gap-2 mb-2">
-                    {([{label:'하루',val:'single'},{label:'기간',val:'range'}] as const).map(({label,val})=>(
-                      <button key={val} onClick={()=>{ setPopupDateType(val); if(val==='single') setPopupEndDate('') }}
-                        className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupDateType===val?'bg-blue-500 text-white border-blue-500':'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {([{ label: '하루', val: 'single' }, { label: '기간', val: 'range' }] as const).map(({ label, val }) => (
+                      <button key={val} onClick={() => { setPopupDateType(val); if (val === 'single') setPopupEndDate('') }}
+                        className={`flex-1 py-2 rounded-xl text-sm border-2 transition-colors ${popupDateType === val ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
                         {label}
                       </button>
                     ))}
@@ -2586,24 +2584,24 @@ export default function Home() {
                   {popupDateType === 'single'
                     ? <p className="text-xs text-gray-400 dark:text-gray-500">선택한 날짜: <span className="font-medium text-gray-700 dark:text-gray-200">{selectedDate}</span></p>
                     : <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 shrink-0">시작: <span className="font-medium">{selectedDate}</span></p>
-                        <span className="text-gray-300">~</span>
-                        <input type="date" value={popupEndDate} onChange={e=>setPopupEndDate(e.target.value)}
-                          min={selectedDate ?? ''} className={`${INPUT} flex-1`} placeholder="종료 날짜" />
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 shrink-0">시작: <span className="font-medium">{selectedDate}</span></p>
+                      <span className="text-gray-300">~</span>
+                      <input type="date" value={popupEndDate} onChange={e => setPopupEndDate(e.target.value)}
+                        min={selectedDate ?? ''} className={`${INPUT} flex-1`} placeholder="종료 날짜" />
+                    </div>
                   }
                 </div>
-                <input placeholder="제목" value={popupTitle} onChange={e=>setPopupTitle(e.target.value)} className={`${INPUT} mb-2`} />
-                <textarea placeholder="내용 (선택)" value={popupContent} onChange={e=>setPopupContent(e.target.value)} className={`${INPUT} mb-3`} rows={3} />
+                <input placeholder="제목" value={popupTitle} onChange={e => setPopupTitle(e.target.value)} className={`${INPUT} mb-2`} />
+                <textarea placeholder="내용 (선택)" value={popupContent} onChange={e => setPopupContent(e.target.value)} className={`${INPUT} mb-3`} rows={3} />
                 <div className="flex gap-2">
-                  <button onClick={()=>setShowAddForm(false)} className={BTN_GRAY}>취소</button>
+                  <button onClick={() => setShowAddForm(false)} className={BTN_GRAY}>취소</button>
                   <button onClick={submitPost} className={BTN_GREEN}>저장</button>
                 </div>
               </>
             ) : (
               <div className="flex gap-2">
                 <button onClick={closeDatePopup} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>
-                <button onClick={()=>setShowAddForm(true)} className={BTN_BLUE}>+ 일정 추가</button>
+                <button onClick={() => setShowAddForm(true)} className={BTN_BLUE}>+ 일정 추가</button>
               </div>
             )}
           </div>
@@ -2648,7 +2646,7 @@ export default function Home() {
                 </button>
               </div>
               <button onClick={() => {
-                if (activeNoticeIdx < notices.length - 1) setActiveNoticeIdx(i => i+1)
+                if (activeNoticeIdx < notices.length - 1) setActiveNoticeIdx(i => i + 1)
                 else setShowNoticePopup(false)
               }} className="btn w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium rounded-xl text-sm shadow-sm">
                 {activeNoticeIdx < notices.length - 1 ? '다음 공지 →' : '확인'}
@@ -2672,26 +2670,26 @@ export default function Home() {
             {allNotices.length === 0
               ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">등록된 공지가 없어요</p>
               : <div className="flex flex-col gap-3">
-                  {allNotices.map(n => (
-                    <div key={n.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2.5 flex items-center justify-between">
-                        <p className="font-medium text-sm truncate">{n.title}</p>
-                        <div className="flex gap-1.5 shrink-0 ml-2">
-                          <button onClick={() => { setShowNoticeManager(false); openEditNotice(n) }}
-                            className="btn text-xs px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg hover:bg-blue-100">수정</button>
-                          <button onClick={() => deleteNotice(n.id)}
-                            className="btn text-xs px-2.5 py-1 bg-red-50 dark:bg-red-900/30 text-red-400 rounded-lg hover:bg-red-100">삭제</button>
-                        </div>
+                {allNotices.map(n => (
+                  <div key={n.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2.5 flex items-center justify-between">
+                      <p className="font-medium text-sm truncate">{n.title}</p>
+                      <div className="flex gap-1.5 shrink-0 ml-2">
+                        <button onClick={() => { setShowNoticeManager(false); openEditNotice(n) }}
+                          className="btn text-xs px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg hover:bg-blue-100">수정</button>
+                        <button onClick={() => deleteNotice(n.id)}
+                          className="btn text-xs px-2.5 py-1 bg-red-50 dark:bg-red-900/30 text-red-400 rounded-lg hover:bg-red-100">삭제</button>
                       </div>
-                      <div className="px-3 py-2 notice-md max-h-24 overflow-hidden text-xs opacity-70">
-                        <ReactMarkdown>{n.content.slice(0, 100) + (n.content.length > 100 ? '...' : '')}</ReactMarkdown>
-                      </div>
-                      <p className="px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
-                        {new Date(n.created_at).toLocaleDateString('ko-KR', { month:'long', day:'numeric' })} 등록
-                      </p>
                     </div>
-                  ))}
-                </div>
+                    <div className="px-3 py-2 notice-md max-h-24 overflow-hidden text-xs opacity-70">
+                      <ReactMarkdown>{n.content.slice(0, 100) + (n.content.length > 100 ? '...' : '')}</ReactMarkdown>
+                    </div>
+                    <p className="px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
+                      {new Date(n.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 등록
+                    </p>
+                  </div>
+                ))}
+              </div>
             }
             <button onClick={() => setShowNoticeManager(false)}
               className="mt-4 w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm">닫기</button>

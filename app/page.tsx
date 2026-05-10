@@ -1274,6 +1274,21 @@ export default function Home() {
   const approvePost = async (postId: string) => {
     const { error } = await supabase.from('posts').update({ status: 'approved' }).eq('id', postId)
     if (error) { showToast(error.message, 'error'); return }
+
+    // 해당 일정 정보 가져오기
+    const { data: post } = await supabase.from('posts').select('grade, created_by').eq('id', postId).single()
+    if (post) {
+      // 해당 학년 학생들에게 notifications 추가 (일정 올린 본인 제외)
+      let q = supabase.from('users').select('id').neq('role', 'admin').neq('role', 'teacher').neq('id', post.created_by)
+      if (post.grade) q = q.eq('grade', post.grade)
+      const { data: targetUsers } = await q
+      if (targetUsers?.length) {
+        await supabase.from('notifications').insert(
+          targetUsers.map(u => ({ user_id: u.id, post_id: postId, is_read: false, status: 'pending' }))
+        )
+      }
+    }
+
     setPendingPosts(prev => prev.filter(p => p.id !== postId))
   }
   const rejectPost = async (postId: string) => {

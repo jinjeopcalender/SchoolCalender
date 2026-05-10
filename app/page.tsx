@@ -1729,7 +1729,7 @@ export default function Home() {
               </div>
               <button onClick={togglePush}
                 className={`btn mt-2 w-full py-2 rounded-lg text-sm flex items-center justify-center gap-1.5 ${pushEnabled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'}`}>
-                {pushEnabled ? '🔔' : '🔕'}<span className="text-xs">푸시 알림 {pushEnabled ? 'ON' : 'OFF'}</span>
+                <span className="text-xs">푸시 알림: {pushEnabled ? 'ON' : 'OFF'}</span>
               </button>
             </div>
 

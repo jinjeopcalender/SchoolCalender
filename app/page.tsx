@@ -868,7 +868,7 @@ export default function Home() {
   const loadBoardPosts = async (grade: number) => {
     setBoardLoading(true)
     const { data } = await supabase.from('board_posts')
-      .select('id, grade, title, content, created_at, user_id')
+      .select('id, grade, title, content, created_at, user_id, board_comments(count)')
       .eq('grade', grade)
       .order('created_at', { ascending: false })
     setBoardPosts(data || [])
@@ -939,6 +939,14 @@ export default function Home() {
     if (diff < 3600) return `${Math.floor(diff/60)}분 전`
     if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`
     return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+  }
+
+  // 비로그인용 선생님 이름 마스킹 (2글자: 성만 가림, 3글자+: 가운데 글자 가림)
+  const maskTeacherName = (name: string) => {
+    if (name.length <= 1) return name
+    if (name.length === 2) return '●' + name[1]
+    const mid = Math.floor(name.length / 2)
+    return name.slice(0, mid) + '●'.repeat(name.length - mid * 2 === 0 ? 1 : name.length - mid - Math.ceil(name.length / 2) + 1) + name.slice(mid + 1)
   }
 
   // ── 기타 함수들 ───────────────────────────────────────────────
@@ -1510,6 +1518,7 @@ export default function Home() {
                   <Calendar
                     events={events}
                     onDateClick={(date) => {
+                      if (showDatePopup) return
                       const dayEvents = events.filter(e => isEventOnDate(e, date))
                       setSelectedDate(date)
                       setSelectedDateEvents(dayEvents)
@@ -1558,7 +1567,7 @@ export default function Home() {
                                     <div key={t.id} className="px-4 py-4 flex items-center justify-between bg-white dark:bg-gray-950">
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <p className="text-base font-semibold">{t.name} 선생님</p>
+                                          <p className="text-base font-semibold">{maskTeacherName(t.name)} 선생님</p>
                                           {t.user_id && <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">인증됨</span>}
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">📍 {t.location}</p>
@@ -1584,7 +1593,7 @@ export default function Home() {
           </div>
 
           {/* 모바일 하단 탭 (비로그인) */}
-          <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden">
+          <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden z-30">
             <button onClick={() => setActiveTab('calendar')}
               className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs ${activeTab==='calendar'?'text-blue-500':'text-gray-400 dark:text-gray-500'}`}>
               <span className="text-xl">📅</span>캘린더
@@ -1804,6 +1813,12 @@ export default function Home() {
                                 <span className="text-xs text-gray-400 dark:text-gray-500">익명</span>
                                 <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
                                 <span className="text-xs text-gray-400 dark:text-gray-500">{formatBoardDate(post.created_at)}</span>
+                                {(post.board_comments?.[0]?.count ?? 0) > 0 && (
+                                  <>
+                                    <span className="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                                    <span className="text-xs text-blue-400 dark:text-blue-500">💬 {post.board_comments[0].count}</span>
+                                  </>
+                                )}
                               </div>
                             </button>
                           ))
@@ -1911,7 +1926,7 @@ export default function Home() {
             </div>
 
             {/* 모바일 하단 탭 */}
-            <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden">
+            <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex md:hidden z-30">
               {(['calendar','board','teacher'] as Tab[]).map(tab => (
                 <button key={tab} onClick={() => {
                   if (tab === 'board') {

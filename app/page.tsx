@@ -499,7 +499,6 @@ export default function Home() {
             .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
           if (n) {
             setNotifications(prev => prev.some(x => x.id === n.id) ? prev : [n, ...prev])
-            sendPush(uid, '📅 새 일정 알림', n.posts?.title ?? '새 일정이 추가됐어요')
           }
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
@@ -559,7 +558,6 @@ export default function Home() {
           (payload) => {
             if (payload.new.created_by === uid && payload.new.status === 'approved' && payload.new.is_user_generated) {
               setApprovedCount(prev => prev + 1)
-              sendPush(uid, '✅ 일정 승인', `"${payload.new.title}" 일정이 승인됐어요!`)
             }
           })
         .subscribe()
@@ -1728,11 +1726,11 @@ export default function Home() {
                   </button>
                 )}
                 <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">로그아웃</button>
-                <button onClick={togglePush}
-                  className={`btn px-3 py-1.5 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap ${pushEnabled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'}`}>
-                  {pushEnabled ? '🔔' : '🔕'}<span className="hidden md:inline ml-1 text-xs">{pushEnabled ? '알림 ON' : '알림 OFF'}</span>
-                </button>
               </div>
+              <button onClick={togglePush}
+                className={`btn mt-2 w-full py-2 rounded-lg text-sm flex items-center justify-center gap-1.5 ${pushEnabled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'}`}>
+                {pushEnabled ? '🔔' : '🔕'}<span className="text-xs">푸시 알림 {pushEnabled ? 'ON' : 'OFF'}</span>
+              </button>
             </div>
 
             {/* PC 사이드 탭 */}

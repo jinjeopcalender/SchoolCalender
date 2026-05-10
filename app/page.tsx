@@ -1730,7 +1730,6 @@ export default function Home() {
                     )}
                   </button>
                 )}
-                <button onClick={logout} className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">로그아웃</button>
                 <button onClick={() => setShowSettings(true)}
                   className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
                   ⚙️<span className="hidden md:inline ml-1 text-xs">설정</span>

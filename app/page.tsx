@@ -499,6 +499,7 @@ export default function Home() {
             .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
           if (n) {
             setNotifications(prev => prev.some(x => x.id === n.id) ? prev : [n, ...prev])
+            sendPush(uid, '📅 새 일정 알림', n.posts?.title ?? '새 일정이 추가됐어요')
           }
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
@@ -2487,7 +2488,8 @@ export default function Home() {
                   const isSchoolEvent = event.category === '학교행사' || event.category === '휴일'
                   const isPersonal = event.is_personal === true
                   const isMyEvent = event.created_by === user?.id
-                  const canDelete = isPersonal ? true : isSchoolEvent ? isAdmin : (isMyEvent || isAdmin)
+                  // 학교행사/휴일은 관리자만 삭제, 나머지는 본인 캘린더에서 누구나 삭제 가능
+                  const canDelete = isSchoolEvent ? isAdmin : true
                   return (
                     <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">

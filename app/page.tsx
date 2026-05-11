@@ -85,6 +85,7 @@ export default function Home() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifTab, setNotifTab] = useState<'active' | 'held'>('active')
+  const [showNotifBanner, setShowNotifBanner] = useState(false)
 
   // 날짜 선택 대기
   const [pendingPostId, setPendingPostId] = useState<string | null>(null)
@@ -579,7 +580,9 @@ export default function Home() {
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,end_date,category)')
       .eq('user_id', uid).eq('is_read', false).neq('status', 'dismissed').neq('status', 'accepted')
+    const pendingNotifs = (notifData || []).filter((n: any) => n.status === 'pending')
     setNotifications(notifData || [])
+    if (pendingNotifs.length > 0) setShowNotifBanner(true)
 
     if (admin) {
       const { data: pending } = await supabase.from('posts').select('*').eq('status', 'pending')
@@ -593,6 +596,7 @@ export default function Home() {
             .select('*, posts(id,title,content,default_date,end_date,category)').eq('id', payload.new.id).single()
           if (n) {
             setNotifications(prev => prev.some(x => x.id === n.id) ? prev : [n, ...prev])
+            if (n.status === 'pending') setShowNotifBanner(true)
           }
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
@@ -1517,6 +1521,27 @@ export default function Home() {
       {ToastUI}
       {HoverTooltipUI}
 
+      {/* 새 알림 배너 */}
+      {showNotifBanner && !showNotifications && badgeCount > 0 && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[90] animate-slide-up px-4 w-full max-w-sm">
+          <div className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-xl shrink-0">🔔</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">새로운 알림이 있어요!</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">확인하지 않은 일정 알림 {badgeCount}개</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => { setShowNotifBanner(false); setShowNotifications(true) }}
+                className="btn text-xs px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium shadow-sm">
+                확인
+              </button>
+              <button onClick={() => setShowNotifBanner(false)}
+                className="text-gray-400 hover:text-gray-500 text-lg leading-none px-1">×</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 튜토리얼 오버레이 */}
       {showTutorial && user && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -1794,48 +1819,54 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 md:w-full">
-                <button onClick={() => setShowNotifications(true)}
-                  className="btn relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
-                  🔔<span className="hidden md:inline ml-1 text-xs">알림</span>
-                  {badgeCount > 0 && (
-                    <span className="badge-pulse absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                      {badgeCount}
-                    </span>
+              <div className="flex flex-col gap-1.5 md:w-full">
+                {/* 첫 번째 줄: 알림 + 메시지/수신함 */}
+                <div className="flex items-center gap-2 md:w-full">
+                  <button onClick={() => setShowNotifications(true)}
+                    className="btn relative px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
+                    🔔<span className="hidden md:inline ml-1 text-xs">알림</span>
+                    {badgeCount > 0 && (
+                      <span className="badge-pulse absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                        {badgeCount}
+                      </span>
+                    )}
+                  </button>
+                  {isTeacher && (
+                    <button onClick={() => setShowMsgInbox(true)}
+                      className="btn relative px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
+                      💬<span className="hidden md:inline ml-1 text-xs">수신함</span>
+                      {myMessages.filter(m => !m.reply).length > 0 && (
+                        <span className="badge-pulse absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                          {myMessages.filter(m => !m.reply).length}
+                        </span>
+                      )}
+                    </button>
                   )}
-                </button>
-                {isTeacher && (
-                  <button onClick={() => setShowMsgInbox(true)}
-                    className="btn relative px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
-                    💬<span className="hidden md:inline ml-1 text-xs">수신함</span>
-                    {myMessages.filter(m => !m.reply).length > 0 && (
-                      <span className="badge-pulse absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                        {myMessages.filter(m => !m.reply).length}
-                      </span>
-                    )}
+                  {!isTeacher && (
+                    <button onClick={openSentMessages}
+                      className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
+                      💬<span className="hidden md:inline ml-1 text-xs">메시지</span>
+                      {sentMessages.filter(m => m.reply && !m.reply_read).length > 0 && (
+                        <span className="badge-pulse absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                          {sentMessages.filter(m => m.reply && !m.reply_read).length}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+                {/* 두 번째 줄: 유저(superadmin) + 설정 */}
+                <div className="flex items-center gap-2 md:w-full">
+                  {isSuperAdmin && (
+                    <button onClick={() => { setShowUserViewer(true); loadAllUsers() }}
+                      className="btn px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
+                      👑<span className="hidden md:inline ml-1 text-xs">유저</span>
+                    </button>
+                  )}
+                  <button onClick={() => setShowSettings(true)}
+                    className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
+                    ⚙️<span className="hidden md:inline ml-1 text-xs">설정</span>
                   </button>
-                )}
-                {!isTeacher && (
-                  <button onClick={openSentMessages}
-                    className="btn relative px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
-                    💬<span className="hidden md:inline ml-1 text-xs">메시지</span>
-                    {sentMessages.filter(m => m.reply && !m.reply_read).length > 0 && (
-                      <span className="badge-pulse absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                        {sentMessages.filter(m => m.reply && !m.reply_read).length}
-                      </span>
-                    )}
-                  </button>
-                )}
-                {isSuperAdmin && (
-                  <button onClick={() => { setShowUserViewer(true); loadAllUsers() }}
-                    className="btn px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
-                    👑<span className="hidden md:inline ml-1 text-xs">유저</span>
-                  </button>
-                )}
-                <button onClick={() => setShowSettings(true)}
-                  className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
-                  ⚙️<span className="hidden md:inline ml-1 text-xs">설정</span>
-                </button>
+                </div>
               </div>
             </div>
 

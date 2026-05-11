@@ -5,7 +5,8 @@ import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase'
 import Calendar from '@/components/Calendar'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
-import { registerPush, isPushEnabled, unregisterPush } from '@/lib/push'
+import { registerPush, isPushEnabled, unregisterPush, lastPushError } from '@/lib/push'
+
 
 type Tab = 'calendar' | 'board' | 'teacher'
 type Category = '수행평가' | '기타'
@@ -240,7 +241,7 @@ export default function Home() {
     const handle = () => {
       if (showBoardPost) { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null); return }
       if (showBoardForm) { setShowBoardForm(false); setBoardTitle(''); setBoardContent(''); return }
-      if (showSettings)  { setShowSettings(false); return }
+      if (showSettings) { setShowSettings(false); return }
       if (showNoticePopup) { setShowNoticePopup(false); return }
       if (showNoticeManager) { setShowNoticeManager(false); return }
       if (showNoticeForm) { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
@@ -264,7 +265,7 @@ export default function Home() {
 
   useEffect(() => { if (showBoardPost) pushHistory() }, [showBoardPost])
   useEffect(() => { if (showBoardForm) pushHistory() }, [showBoardForm])
-  useEffect(() => { if (showSettings)  pushHistory() }, [showSettings])
+  useEffect(() => { if (showSettings) pushHistory() }, [showSettings])
   useEffect(() => { if (showNotifications) pushHistory() }, [showNotifications])
   useEffect(() => { if (showDatePopup) pushHistory() }, [showDatePopup])
   useEffect(() => { if (showAddForm) pushHistory() }, [showAddForm])
@@ -1041,30 +1042,21 @@ export default function Home() {
   }
 
   const togglePush = async () => {
-  if (!user) return
-  if (pushEnabled) {
-    const ok = await unregisterPush(user.id, supabase)
-    if (ok) {
-      setPushEnabled(false)
-      showToast('푸시 알림을 껐어요')
+    if (!user) return
+    if (pushEnabled) {
+      const ok = await unregisterPush(user.id, supabase)
+      if (ok) {
+        setPushEnabled(false)
+        showToast('푸시 알림을 껐어요')
+      } else {
+        showToast('알림 해제에 실패했어요', 'error')
+      }
     } else {
-      showToast('알림 해제에 실패했어요', 'error')
-    }
-  } else {
-    try {
       const ok = await registerPush(user.id, supabase)
       setPushEnabled(ok)
-      if (!ok) {
-        const perm = Notification.permission
-        showToast(`실패: 권한=${perm} / SW=${('serviceWorker' in navigator)} / Push=${('PushManager' in window)}`, 'error')
-      } else {
-        showToast('푸시 알림을 켰어요! 🔔')
-      }
-    } catch (e: any) {
-      showToast(`에러: ${e?.message ?? String(e)}`, 'error')
+      showToast(ok ? '푸시 알림을 켰어요! 🔔' : `실패: ${lastPushError}`, ok ? 'success' : 'error')
     }
   }
-}
 
   const closeDatePopup = () => {
     setShowDatePopup(false); setSelectedDate(null); setSelectedDateEvents([])

@@ -7,6 +7,8 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
 }
 
+export let lastPushError = '' 
+
 export async function registerPush(userId: string, supabase: any): Promise<boolean> {
   try {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
@@ -43,7 +45,8 @@ export async function registerPush(userId: string, supabase: any): Promise<boole
     }
 
     return true
-  } catch (e) {
+  } catch (e: any) {
+    lastPushError = e?.message ?? String(e)  // ← catch에 추가
     console.error('❌ registerPush error:', e)
     return false
   }

@@ -1041,21 +1041,30 @@ export default function Home() {
   }
 
   const togglePush = async () => {
-    if (!user) return
-    if (pushEnabled) {
-      const ok = await unregisterPush(user.id, supabase)
-      if (ok) {
-        setPushEnabled(false)
-        showToast('푸시 알림을 껐어요')
-      } else {
-        showToast('알림 해제에 실패했어요', 'error')
-      }
+  if (!user) return
+  if (pushEnabled) {
+    const ok = await unregisterPush(user.id, supabase)
+    if (ok) {
+      setPushEnabled(false)
+      showToast('푸시 알림을 껐어요')
     } else {
+      showToast('알림 해제에 실패했어요', 'error')
+    }
+  } else {
+    try {
       const ok = await registerPush(user.id, supabase)
       setPushEnabled(ok)
-      showToast(ok ? '푸시 알림을 켰어요! 🔔' : '알림 허용이 필요해요', ok ? 'success' : 'error')
+      if (!ok) {
+        const perm = Notification.permission
+        showToast(`실패: 권한=${perm} / SW=${('serviceWorker' in navigator)} / Push=${('PushManager' in window)}`, 'error')
+      } else {
+        showToast('푸시 알림을 켰어요! 🔔')
+      }
+    } catch (e: any) {
+      showToast(`에러: ${e?.message ?? String(e)}`, 'error')
     }
   }
+}
 
   const closeDatePopup = () => {
     setShowDatePopup(false); setSelectedDate(null); setSelectedDateEvents([])

@@ -11,21 +11,31 @@ export let lastPushError = ''
 
 export async function registerPush(userId: string, supabase: any): Promise<boolean> {
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      lastPushError = 'SW or PushManager not supported'
+      return false
+    }
 
     const reg = await navigator.serviceWorker.register('/sw.js')
     await navigator.serviceWorker.ready
 
     const permission = await Notification.requestPermission()
-    if (permission !== 'granted') return false
+    if (permission !== 'granted') {
+      lastPushError = `permission: ${permission}`
+      return false
+    }
 
-    // ── 기존 구독이 있으면 재사용, 없을 때만 새로 생성 ──
     let sub = await reg.pushManager.getSubscription()
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as ArrayBuffer,
       })
+    }
+
+    if (!sub) {
+      lastPushError = 'subscribe() returned null'
+      return false
     }
 
     const json = sub.toJSON()
@@ -40,14 +50,14 @@ export async function registerPush(userId: string, supabase: any): Promise<boole
     )
 
     if (error) {
-      console.error('Push subscription upsert failed:', error)
+      lastPushError = `DB error: ${error.message}`
       return false
     }
 
+    lastPushError = ''
     return true
   } catch (e: any) {
-    lastPushError = e?.message ?? String(e)  // ← catch에 추가
-    console.error('❌ registerPush error:', e)
+    lastPushError = e?.message ?? String(e)
     return false
   }
 }

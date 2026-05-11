@@ -7,7 +7,6 @@ import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import { registerPush, isPushEnabled, unregisterPush, lastPushError } from '@/lib/push'
 
-
 type Tab = 'calendar' | 'board' | 'teacher'
 type Category = '수행평가' | '기타'
 
@@ -241,7 +240,7 @@ export default function Home() {
     const handle = () => {
       if (showBoardPost) { setShowBoardPost(false); setBoardComments([]); setShowPostAuthor(null); return }
       if (showBoardForm) { setShowBoardForm(false); setBoardTitle(''); setBoardContent(''); return }
-      if (showSettings) { setShowSettings(false); return }
+      if (showSettings)  { setShowSettings(false); return }
       if (showNoticePopup) { setShowNoticePopup(false); return }
       if (showNoticeManager) { setShowNoticeManager(false); return }
       if (showNoticeForm) { setShowNoticeForm(false); setNoticeTitle(''); setNoticeContent(''); setNoticePreview(false); setEditingNotice(null); return }
@@ -265,7 +264,7 @@ export default function Home() {
 
   useEffect(() => { if (showBoardPost) pushHistory() }, [showBoardPost])
   useEffect(() => { if (showBoardForm) pushHistory() }, [showBoardForm])
-  useEffect(() => { if (showSettings) pushHistory() }, [showSettings])
+  useEffect(() => { if (showSettings)  pushHistory() }, [showSettings])
   useEffect(() => { if (showNotifications) pushHistory() }, [showNotifications])
   useEffect(() => { if (showDatePopup) pushHistory() }, [showDatePopup])
   useEffect(() => { if (showAddForm) pushHistory() }, [showAddForm])
@@ -1054,7 +1053,7 @@ export default function Home() {
     } else {
       const ok = await registerPush(user.id, supabase)
       setPushEnabled(ok)
-      showToast(ok ? '푸시 알림을 켰어요! 🔔' : `실패: ${lastPushError}`, ok ? 'success' : 'error')
+      showToast(ok ? '푸시 알림을 켰어요! 🔔' : `실패: ${lastPushError || '알림 허용이 필요해요'}`, ok ? 'success' : 'error')
     }
   }
 
@@ -2010,15 +2009,27 @@ export default function Home() {
             <h3 className="font-bold text-base mb-5">⚙️ 설정</h3>
 
             {/* 푸시 알림 */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-              <div>
-                <p className="text-sm font-medium">🔔 푸시 알림</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">새 일정, 댓글, 답장 알림을 받아요</p>
+            <div className="py-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">🔔 푸시 알림</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">새 일정, 댓글, 답장 알림을 받아요</p>
+                </div>
+                <button onClick={togglePush}
+                  className={`btn relative w-12 h-6 rounded-full transition-colors duration-200 ${pushEnabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200 ${pushEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
               </div>
-              <button onClick={togglePush}
-                className={`btn relative w-12 h-6 rounded-full transition-colors duration-200 ${pushEnabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200 ${pushEnabled ? 'left-7' : 'left-1'}`} />
-              </button>
+              {!pushEnabled && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                  <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1.5">📱 알림이 안 켜지면?</p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-blue-600 dark:text-blue-400"><span className="font-medium">iPhone/iPad</span> → 홈 화면에 앱 추가 후 설정</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400"><span className="font-medium">Android</span> → 설정 → 앱 → 클래스톡 → 알림 허용</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400"><span className="font-medium">PC</span> → 브라우저 주소창 왼쪽 🔒 → 알림 허용</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 로그아웃 */}

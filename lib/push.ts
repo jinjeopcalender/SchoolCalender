@@ -1,4 +1,7 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+console.log('VAPID KEY 확인:', VAPID_PUBLIC_KEY)
+
+export let lastPushError = ''
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -6,8 +9,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const rawData = atob(base64)
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
 }
-
-export let lastPushError = '' 
 
 export async function registerPush(userId: string, supabase: any): Promise<boolean> {
   try {
@@ -62,7 +63,6 @@ export async function registerPush(userId: string, supabase: any): Promise<boole
   }
 }
 
-// ── 브라우저 구독 상태 + DB 레코드 모두 확인 ──
 export async function isPushEnabled(userId: string, supabase: any): Promise<boolean> {
   try {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
@@ -73,7 +73,6 @@ export async function isPushEnabled(userId: string, supabase: any): Promise<bool
     const sub = await reg.pushManager.getSubscription()
     if (!sub || Notification.permission !== 'granted') return false
 
-    // DB에 실제 레코드가 있는지 검증
     const { data, error } = await supabase
       .from('push_subscriptions')
       .select('id')
@@ -88,7 +87,6 @@ export async function isPushEnabled(userId: string, supabase: any): Promise<bool
   }
 }
 
-// ── DB 삭제 성공 확인 후 브라우저 구독 해제 ──
 export async function unregisterPush(userId: string, supabase: any): Promise<boolean> {
   try {
     const reg = await navigator.serviceWorker.getRegistration('/sw.js')
@@ -115,4 +113,3 @@ export async function unregisterPush(userId: string, supabase: any): Promise<boo
     return false
   }
 }
-

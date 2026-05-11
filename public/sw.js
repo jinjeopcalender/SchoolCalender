@@ -17,8 +17,15 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       const existing = list.find(c => c.url.includes(self.location.origin))
-      if (existing) { existing.focus(); existing.navigate(url) }
-      else clients.openWindow(url)
+      if (existing) {
+        existing.focus()
+        // client.navigate()는 일부 브라우저(Safari 등)에서 미지원이므로 확인 후 호출
+        if (typeof existing.navigate === 'function') {
+          existing.navigate(url)
+        }
+      } else {
+        clients.openWindow(url)
+      }
     })
   )
 })

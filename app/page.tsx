@@ -282,7 +282,6 @@ export default function Home() {
   // ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    supabase.removeAllChannels()
     const init = async () => {
       const { data, error } = await supabase.auth.getUser()
       const cu = error ? null : data.user
@@ -354,7 +353,7 @@ export default function Home() {
       if (ud?.grade) setBoardGrade(ud.grade)
 
       // 푸시 알림 상태 확인
-      isPushEnabled().then(setPushEnabled)
+      isPushEnabled(cu.id, supabase).then(setPushEnabled)
     }
     init()
     return () => { supabase.removeAllChannels() }
@@ -489,7 +488,7 @@ export default function Home() {
 
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,end_date,category)')
-      .eq('user_id', uid).neq('status', 'dismissed').neq('status', 'accepted')
+      .eq('user_id', uid).eq('is_read', false).neq('status', 'dismissed').neq('status', 'accepted')
     setNotifications(notifData || [])
 
     if (admin) {
@@ -509,7 +508,8 @@ export default function Home() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
         (payload) => {
           const s = payload.new.status
-          if (s === 'dismissed' || s === 'accepted')
+          const read = payload.new.is_read
+          if (s === 'dismissed' || s === 'accepted' || read === true)
             setNotifications(prev => prev.filter(n => n.id !== payload.new.id))
           else
             setNotifications(prev => prev.map(n => n.id === payload.new.id ? { ...n, status: s } : n))
@@ -1030,7 +1030,7 @@ export default function Home() {
 
   const sendPush = async (userId: string, title: string, body: string, url = '/') => {
     try {
-      await fetch(`/api/send-push`, {
+      await fetch(`/api/push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, title, body, url }),
@@ -1043,9 +1043,13 @@ export default function Home() {
   const togglePush = async () => {
     if (!user) return
     if (pushEnabled) {
-      await unregisterPush(user.id, supabase)
-      setPushEnabled(false)
-      showToast('푸시 알림을 껐어요')
+      const ok = await unregisterPush(user.id, supabase)
+      if (ok) {
+        setPushEnabled(false)
+        showToast('푸시 알림을 껐어요')
+      } else {
+        showToast('알림 해제에 실패했어요', 'error')
+      }
     } else {
       const ok = await registerPush(user.id, supabase)
       setPushEnabled(ok)
@@ -1269,6 +1273,7 @@ export default function Home() {
   }
 
   const dismissNotification = async (notif: any) => {
+    if (!user) return
     await supabase.from('notifications').update({ status: 'dismissed', is_read: true }).eq('id', notif.id)
     await supabase.from('user_actions').insert({ user_id: user.id, post_id: notif.posts.id, action: 'dismissed' })
     setNotifications(prev => prev.filter(n => n.id !== notif.id))

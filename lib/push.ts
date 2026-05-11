@@ -63,22 +63,34 @@ export async function registerPush(userId: string, supabase: any): Promise<boole
   }
 }
 
-// ── DB 기준으로만 확인 (어느 기기든 이 계정의 구독이 DB에 하나라도 있으면 켜짐) ──
+// ── 현재 기기의 브라우저 구독 + DB 레코드 둘 다 확인 ──
+// 기기마다 독립적으로 토글 상태를 판단해야 다른 기기 구독에 영향받지 않음
 export async function isPushEnabled(userId: string, supabase: any): Promise<boolean> {
   try {
-    const { count, error } = await supabase
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
+
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js')
+    if (!reg) return false
+
+    const sub = await reg.pushManager.getSubscription()
+    if (!sub || Notification.permission !== 'granted') return false
+
+    // 이 기기의 endpoint가 DB에 있는지 확인
+    const { data, error } = await supabase
       .from('push_subscriptions')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('user_id', userId)
+      .eq('endpoint', sub.endpoint)
+      .maybeSingle()
 
     if (error) return false
-    return (count ?? 0) > 0
+    return !!data
   } catch {
     return false
   }
 }
 
-// ── 이 기기의 브라우저 구독 + DB 레코드 삭제 ──
+// ── 이 기기의 브라우저 구독 + DB 레코드만 삭제 (다른 기기 구독은 유지) ──
 export async function unregisterPush(userId: string, supabase: any): Promise<boolean> {
   try {
     const reg = await navigator.serviceWorker.getRegistration('/sw.js')

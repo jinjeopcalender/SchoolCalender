@@ -32,6 +32,7 @@ export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [userGrade, setUserGrade] = useState<number | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [approvedCount, setApprovedCount] = useState(0)
   const [isTeacher, setIsTeacher] = useState(false)
   const [myTeacherRow, setMyTeacherRow] = useState<any>(null)
@@ -224,6 +225,14 @@ export default function Home() {
   const [boardSubmitting, setBoardSubmitting] = useState(false)
   const [showPostAuthor, setShowPostAuthor] = useState<string | null>(null)
 
+  // 슈퍼어드민 유저 뷰어
+  const [showUserViewer, setShowUserViewer] = useState(false)
+  const [allUsers, setAllUsers] = useState<any[]>([])
+  const [approvedStats, setApprovedStats] = useState<Record<string, number>>({})
+  const [viewingUser, setViewingUser] = useState<any>(null)
+  const [viewingEvents, setViewingEvents] = useState<any[]>([])
+  const [viewingLoading, setViewingLoading] = useState(false)
+
   // 푸시 알림
   const [pushEnabled, setPushEnabled] = useState(false)
   const [showPushBanner, setShowPushBanner] = useState(false)
@@ -256,17 +265,19 @@ export default function Home() {
       if (showDatePicker) { cancelDatePicker(); return }
       if (showAddForm) { setShowAddForm(false); return }
       if (showDatePopup) { closeDatePopup(); return }
+      if (showUserViewer) { setShowUserViewer(false); setViewingUser(null); setViewingEvents([]); return }
       if (showNotifications) { setShowNotifications(false); return }
     }
     window.addEventListener('popstate', handle)
     return () => window.removeEventListener('popstate', handle)
   }, [showBoardPost, showBoardForm, showNoticePopup, showNoticeManager, showNoticeForm, showReplyForm, showSentMessages, showMsgInbox, showMsgForm, showTeacherPicker, showTeacherForm,
-    showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications])
+    showSchoolEventForm, showEditEvent, showDatePicker, showAddForm, showDatePopup, showNotifications, showUserViewer])
 
   useEffect(() => { if (showBoardPost) pushHistory() }, [showBoardPost])
   useEffect(() => { if (showBoardForm) pushHistory() }, [showBoardForm])
   useEffect(() => { if (showSettings)  pushHistory() }, [showSettings])
   useEffect(() => { if (showNotifications) pushHistory() }, [showNotifications])
+  useEffect(() => { if (showUserViewer) pushHistory() }, [showUserViewer])
   useEffect(() => { if (showDatePopup) pushHistory() }, [showDatePopup])
   useEffect(() => { if (showAddForm) pushHistory() }, [showAddForm])
   useEffect(() => { if (showDatePicker) pushHistory() }, [showDatePicker])
@@ -322,8 +333,10 @@ export default function Home() {
         setTimeout(() => { setShowTutorial(true); setTutorialStep(0) }, 800)
       }
 
-      const admin = ud?.role === 'admin'
+      const superadmin = ud?.role === 'superadmin'
+      const admin = ud?.role === 'admin' || superadmin
       const teacher = ud?.role === 'teacher'
+      setIsSuperAdmin(superadmin)
       setIsAdmin(admin)
       setIsTeacher(teacher)
 
@@ -372,6 +385,76 @@ export default function Home() {
   }, [boardGrade, activeTab])
 
   // ── 데이터 로드 ───────────────────────────────────────────────
+  // ── 슈퍼어드민: 전체 유저 목록 로드 ──
+  const loadAllUsers = async () => {
+    const [{ data: users }, { data: posts }] = await Promise.all([
+      supabase.from('users').select('id, name, role, grade').order('role').order('name'),
+      supabase.from('posts').select('created_by').eq('status', 'approved').eq('is_user_generated', true),
+    ])
+    setAllUsers(users || [])
+    const stats: Record<string, number> = {}
+    for (const p of (posts || [])) {
+      stats[p.created_by] = (stats[p.created_by] ?? 0) + 1
+    }
+    setApprovedStats(stats)
+  }
+
+  // ── 슈퍼어드민: 특정 유저 캘린더 로드 ──
+  const loadUserCalendar = async (targetUser: any) => {
+    setViewingLoading(true)
+    setViewingUser(targetUser)
+
+    const { data: personalCal } = await supabase
+      .from('user_calendar')
+      .select('id, assigned_date, end_date, title, content, color')
+      .eq('user_id', targetUser.id)
+      .eq('is_personal', true)
+
+    const { data: normalCal } = await supabase
+      .from('user_calendar')
+      .select('id, assigned_date, end_date, posts(id,title,content,category,grade)')
+      .eq('user_id', targetUser.id)
+      .eq('is_personal', false)
+
+    const personalEvents = (personalCal || []).map((item: any) => {
+      const endExclusive = item.end_date
+        ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+        : undefined
+      return {
+        id: item.id, title: item.title, content: item.content,
+        category: '개인', date: item.assigned_date,
+        is_personal: true,
+        start: item.assigned_date, end: endExclusive,
+        color: item.color || '#f59e0b',
+        backgroundColor: item.color || '#f59e0b',
+        borderColor: item.color || '#f59e0b',
+      }
+    })
+
+    const normalEvents = (normalCal || []).filter((item: any) => item.posts).map((item: any) => {
+      const endExclusive = item.end_date
+        ? (() => { const d = new Date(item.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+        : undefined
+      return {
+        id: item.posts.id, title: item.posts.title, content: item.posts.content,
+        category: item.posts.category, date: item.assigned_date,
+        grade: item.posts.grade,
+        start: item.assigned_date, end: endExclusive,
+        color: getCategoryColor(item.posts.category),
+        backgroundColor: getCategoryColor(item.posts.category),
+        borderColor: getCategoryColor(item.posts.category),
+      }
+    })
+
+    const year = new Date().getFullYear()
+    const holidays = [...loadKoreanHolidays(year), ...loadKoreanHolidays(year + 1)]
+    const existingDates = new Set([...personalEvents, ...normalEvents].filter(e => e.category === '휴일').map(e => e.date))
+    const filteredHolidays = holidays.filter((h: any) => !existingDates.has(h.date))
+
+    setViewingEvents([...personalEvents, ...normalEvents, ...filteredHolidays])
+    setViewingLoading(false)
+  }
+
   const loadCalendarData = async (uid: string, grade: number, admin: boolean) => {
     if (!admin) {
       const { data: missed } = await supabase.from('posts').select('id')
@@ -1703,7 +1786,8 @@ export default function Home() {
                 <p className="text-sm font-bold truncate">{displayName}</p>
                 <div className="flex flex-wrap items-center gap-1 mt-0.5">
                   {userGrade && <span className="text-xs text-gray-400 dark:text-gray-500">{userGrade}학년</span>}
-                  {isAdmin && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
+                  {isSuperAdmin && <span className="text-xs text-purple-500 font-medium">👑 슈퍼관리자</span>}
+                  {isAdmin && !isSuperAdmin && <span className="text-xs text-blue-500 font-medium">(관리자)</span>}
                   {isTeacher && myTeacherRow && <span className="text-xs text-emerald-500 font-medium">👩‍🏫 {myTeacherRow.name} 선생님</span>}
                   {!isAdmin && approvedCount > 0 && (
                     <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">⭐ 일정 승인 {approvedCount}회</span>
@@ -1740,6 +1824,12 @@ export default function Home() {
                         {sentMessages.filter(m => m.reply && !m.reply_read).length}
                       </span>
                     )}
+                  </button>
+                )}
+                {isSuperAdmin && (
+                  <button onClick={() => { setShowUserViewer(true); loadAllUsers() }}
+                    className="btn px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-lg text-sm md:flex-1 md:text-center whitespace-nowrap">
+                    👑<span className="hidden md:inline ml-1 text-xs">유저</span>
                   </button>
                 )}
                 <button onClick={() => setShowSettings(true)}
@@ -2848,6 +2938,120 @@ export default function Home() {
                 {editingNotice ? '수정 완료' : '공지 등록'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 슈퍼어드민 유저 뷰어 ── */}
+      {showUserViewer && isSuperAdmin && (
+        <div className={overlayClass}>
+          <div className={`${sheetClass} max-h-[90vh] flex flex-col`}>
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div>
+                <h3 className="font-bold text-base">👑 유저 캘린더 보기</h3>
+                {viewingUser && (
+                  <p className="text-xs text-purple-500 mt-0.5">
+                    현재: {viewingUser.name} ({viewingUser.role}{viewingUser.grade ? ` · ${viewingUser.grade}학년` : ''})
+                  </p>
+                )}
+              </div>
+              <button onClick={() => { setShowUserViewer(false); setViewingUser(null); setViewingEvents([]) }}
+                className="text-gray-400 text-xl leading-none">×</button>
+            </div>
+
+            {!viewingUser ? (
+              /* 유저 목록 + 승인 랭킹 */
+              <div className="overflow-y-auto flex-1">
+
+                {/* 승인 횟수 랭킹 */}
+                {Object.keys(approvedStats).length > 0 && (
+                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+                    <p className="text-xs font-bold text-yellow-700 dark:text-yellow-400 mb-2">⭐ 일정 승인 랭킹</p>
+                    <div className="flex flex-col gap-1.5">
+                      {allUsers
+                        .filter(u => approvedStats[u.id])
+                        .sort((a, b) => (approvedStats[b.id] ?? 0) - (approvedStats[a.id] ?? 0))
+                        .map((u, i) => (
+                          <div key={u.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm w-5 text-center">
+                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+                              </span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{u.name}</span>
+                              {u.grade && <span className="text-xs text-gray-400">{u.grade}학년</span>}
+                            </div>
+                            <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">{approvedStats[u.id]}회</span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+
+                {/* 전체 유저 목록 */}
+                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2">전체 유저 ({allUsers.length}명)</p>
+                {allUsers.length === 0
+                  ? <p className="text-sm text-gray-400 text-center py-8">유저가 없어요</p>
+                  : <div className="flex flex-col gap-2">
+                    {allUsers.map(u => (
+                      <button key={u.id} onClick={() => loadUserCalendar(u)}
+                        className="btn w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl text-left flex items-center justify-between hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">{u.name}</p>
+                            {approvedStats[u.id] && (
+                              <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded-full">
+                                ⭐ {approvedStats[u.id]}회
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                            {u.role === 'superadmin' ? '👑 슈퍼관리자' : u.role === 'admin' ? '🛠 관리자' : u.role === 'teacher' ? '👩‍🏫 선생님' : `${u.grade ?? '?'}학년`}
+                          </p>
+                        </div>
+                        <span className="text-purple-400 text-sm">→</span>
+                      </button>
+                    ))}
+                  </div>
+                }
+              </div>
+            ) : (
+              /* 선택된 유저 캘린더 */
+              <div className="flex-1 overflow-y-auto">
+                <button onClick={() => { setViewingUser(null); setViewingEvents([]) }}
+                  className="mb-3 text-xs text-purple-500 hover:text-purple-600 flex items-center gap-1">
+                  ← 목록으로
+                </button>
+                {viewingLoading
+                  ? <div className="flex justify-center py-12 text-gray-300 text-3xl animate-pulse">⏳</div>
+                  : <Calendar
+                      events={viewingEvents}
+                      onDateClick={(date) => {
+                        const dayEvents = viewingEvents.filter(e => {
+                          const start = e.start || e.date
+                          if (!start) return false
+                          if (e.end) {
+                            const endInclusive = new Date(e.end)
+                            endInclusive.setDate(endInclusive.getDate() - 1)
+                            return date >= start && date <= endInclusive.toISOString().split('T')[0]
+                          }
+                          return start === date
+                        })
+                        if (dayEvents.length > 0) {
+                          showToast(`${date}: ${dayEvents.map(e => e.title).join(', ')}`, 'info')
+                        }
+                      }}
+                      onCellHover={handleCellHover}
+                      holidayDates={new Set(viewingEvents.filter(e => e.category === '휴일' || e.isHoliday).map(e => e.date))}
+                      pendingPostId={null}
+                    />
+                }
+                {/* 읽기 전용 안내 */}
+                <div className="mt-3 p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                  <p className="text-xs text-purple-500 text-center">👁 읽기 전용 — 수정 불가</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

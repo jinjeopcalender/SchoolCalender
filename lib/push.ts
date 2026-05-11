@@ -1,4 +1,5 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+console.log('VAPID KEY 확인:', VAPID_PUBLIC_KEY)
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -102,3 +103,4 @@ export async function unregisterPush(userId: string, supabase: any): Promise<boo
     return false
   }
 }
+

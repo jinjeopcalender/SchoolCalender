@@ -1,5 +1,4 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-console.log('VAPID KEY 확인:', VAPID_PUBLIC_KEY)
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -45,7 +44,7 @@ export async function registerPush(userId: string, supabase: any): Promise<boole
 
     return true
   } catch (e) {
-    console.error('Push registration failed:', e)
+    console.error('❌ registerPush error:', e)
     return false
   }
 }

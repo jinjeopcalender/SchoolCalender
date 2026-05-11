@@ -226,6 +226,7 @@ export default function Home() {
 
   // 푸시 알림
   const [pushEnabled, setPushEnabled] = useState(false)
+  const [showPushBanner, setShowPushBanner] = useState(false)
 
   // 설정
   const [showSettings, setShowSettings] = useState(false)
@@ -353,7 +354,13 @@ export default function Home() {
       if (ud?.grade) setBoardGrade(ud.grade)
 
       // 푸시 알림 상태 확인
-      isPushEnabled(cu.id, supabase).then(setPushEnabled)
+      isPushEnabled(cu.id, supabase).then(enabled => {
+        setPushEnabled(enabled)
+        if (!enabled) {
+          const dismissed = localStorage.getItem('push_banner_dismissed')
+          if (!dismissed) setShowPushBanner(true)
+        }
+      })
     }
     init()
     return () => { supabase.removeAllChannels() }
@@ -1053,7 +1060,7 @@ export default function Home() {
     } else {
       const ok = await registerPush(user.id, supabase)
       setPushEnabled(ok)
-      showToast(ok ? '푸시 알림을 켰어요! 🔔' : `실패: ${lastPushError || '알림 허용이 필요해요'}`, ok ? 'success' : 'error')
+      showToast(ok ? '푸시 알림을 켰어요! 🔔' : lastPushError.includes('denied') ? '브라우저 앱의 알림 권한을 허용해주세요! 📱' : `실패: ${lastPushError || '알림 허용이 필요해요'}`, ok ? 'success' : 'error')
     }
   }
 
@@ -1826,6 +1833,31 @@ export default function Home() {
                     </div>
                   )}
 
+                  {/* 푸시 알림 홍보 배너 */}
+                  {showPushBanner && !pushEnabled && (
+                    <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl animate-fade-in">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-xl shrink-0">🔔</span>
+                          <div>
+                            <p className="text-sm font-bold text-blue-700 dark:text-blue-300">새 일정 알림 받기</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 leading-relaxed">
+                              친구가 수행평가 일정 올리면 바로 알림이 와요!<br />놓치지 말고 설정에서 켜보세요 😊
+                            </p>
+                            <button onClick={() => { setShowPushBanner(false); setShowSettings(true) }}
+                              className="btn mt-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-medium shadow-sm">
+                              알림 켜러 가기 →
+                            </button>
+                          </div>
+                        </div>
+                        <button onClick={() => {
+                          setShowPushBanner(false)
+                          localStorage.setItem('push_banner_dismissed', '1')
+                        }} className="text-blue-300 dark:text-blue-600 text-lg leading-none shrink-0 hover:text-blue-500 transition-colors">×</button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 mb-3 flex-wrap">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">수행평가</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">학교행사</span>
@@ -2024,9 +2056,8 @@ export default function Home() {
                 <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                   <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1.5">📱 알림이 안 켜지면?</p>
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs text-blue-600 dark:text-blue-400"><span className="font-medium">iPhone/iPad</span> → 홈 화면에 앱 추가 후 설정</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400"><span className="font-medium">Android</span> → 설정 → 앱 → 클래스톡 → 알림 허용</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400"><span className="font-medium">PC</span> → 브라우저 주소창 왼쪽 🔒 → 알림 허용</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">① 사용 중인 <span className="font-medium">브라우저 앱</span>의 알림 권한을 허용해주세요</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">② <span className="font-medium">iPhone/iPad</span>는 홈 화면에 앱 추가 후 설정해주세요</p>
                   </div>
                 </div>
               )}

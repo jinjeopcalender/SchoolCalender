@@ -1675,8 +1675,8 @@ export default function Home() {
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
                     <span className="text-xl">🔒</span>
                     <div>
-                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">수행평가·기타 일정은 로그인 후 확인</p>
-                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">학교 일정과 선생님 위치는 지금 바로 볼 수 있어요</p>
+                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">자세한 일정은 로그인 후 확인</p>
+                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">로그인을 해야 정확한 일정을 확인할 수 있어요</p>
                     </div>
                   </div>
                   <div className="flex gap-2 mb-3">

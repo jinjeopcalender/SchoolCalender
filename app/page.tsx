@@ -326,7 +326,7 @@ export default function Home() {
       }
 
       setUser(cu)
-      await supabase.from('users').upsert({ id: cu.id, name: cu.user_metadata.full_name })
+      await supabase.from('users').upsert({ id: cu.id, name: cu.user_metadata.full_name, last_seen_at: new Date().toISOString() })
       const { data: ud } = await supabase.from('users').select('role, grade').eq('id', cu.id).single()
 
       const tutorialKey = `tutorial_done_${cu.id}`
@@ -389,7 +389,7 @@ export default function Home() {
   // ── 슈퍼어드민: 전체 유저 목록 로드 ──
   const loadAllUsers = async () => {
     const [{ data: users }, { data: posts }] = await Promise.all([
-      supabase.from('users').select('id, name, role, grade').order('role').order('name'),
+      supabase.from('users').select('id, name, role, grade, last_seen_at').order('role').order('name'),
       supabase.from('posts').select('created_by').eq('status', 'approved').eq('is_user_generated', true),
     ])
     setAllUsers(users || [])
@@ -3038,6 +3038,20 @@ export default function Home() {
                           </div>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                             {u.role === 'superadmin' ? '👑 슈퍼관리자' : u.role === 'admin' ? '🛠 관리자' : u.role === 'teacher' ? '👩‍🏫 선생님' : `${u.grade ?? '?'}학년`}
+                            {u.last_seen_at && (
+                              <span className="ml-1.5 text-gray-300 dark:text-gray-600">
+                                · {(() => {
+                                  const diff = Date.now() - new Date(u.last_seen_at).getTime()
+                                  const min = Math.floor(diff / 60000)
+                                  const hour = Math.floor(diff / 3600000)
+                                  const day = Math.floor(diff / 86400000)
+                                  if (min < 1) return '방금'
+                                  if (min < 60) return `${min}분 전`
+                                  if (hour < 24) return `${hour}시간 전`
+                                  return `${day}일 전`
+                                })()}
+                              </span>
+                            )}
                           </p>
                         </div>
                         <span className="text-purple-400 text-sm">→</span>

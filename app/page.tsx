@@ -53,6 +53,7 @@ export default function Home() {
   const [monthlyCount, setMonthlyCount] = useState(0)
   const [hasBadge, setHasBadge] = useState(false)
   const [isNewBadge, setIsNewBadge] = useState(false)
+  const [attendedDates, setAttendedDates] = useState<Set<string>>(new Set())
 
   // 캘린더
   const [events, setEvents] = useState<any[]>([])
@@ -361,7 +362,8 @@ export default function Home() {
       await loadNotices()
 
       if (teacher) {
-        const { data: myT } = await supabase.from('teachers').select('*').eq('user_id', cu.id).maybeSingle()
+        const { data: myTList } = await supabase.from('teachers').select('*').eq('user_id', cu.id).limit(1)
+        const myT = myTList?.[0] ?? null
         if (!myT) {
           setShowTeacherPicker(true)
           return
@@ -430,28 +432,26 @@ export default function Home() {
     const today = new Date().toISOString().split('T')[0]
     const thisMonth = today.slice(0, 7)
 
-    // 오늘 이미 출석했는지 확인
-    const { data: todayRecord } = await supabase
+    // 이번 달 전체 출석 날짜 조회
+    const { data: monthRecords } = await supabase
       .from('attendance')
-      .select('id')
+      .select('date')
       .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle()
+      .eq('month', thisMonth)
+      .order('date')
 
-    if (todayRecord) return // 오늘 이미 출석함
+    const attendedDates = new Set((monthRecords || []).map((r: any) => r.date))
+    const alreadyToday = attendedDates.has(today)
+
+    if (alreadyToday) return // 오늘 이미 출석함
 
     // 출석 기록 INSERT
     await supabase.from('attendance').insert({ user_id: userId, date: today, month: thisMonth })
+    attendedDates.add(today)
 
-    // 이번 달 출석일수 계산
-    const { count } = await supabase
-      .from('attendance')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('month', thisMonth)
-
-    const cnt = count ?? 0
+    const cnt = attendedDates.size
     setMonthlyCount(cnt)
+    setAttendedDates(attendedDates)
 
     // 15일 달성 여부
     const prevCount = cnt - 1
@@ -1072,7 +1072,7 @@ export default function Home() {
     await loadTeachers()
     await loadMessages(user.id, false, true, newT)
     await loadCalendarData(user.id, userGrade ?? 0, false)
-    showToast('등록됐어요! 관리자 확인 후 정식 등록될 수 있어요 😊')
+    showToast('등록됐어요! 이제 바로 이용할 수 있어요 😊')
     setSelfAddLoading(false)
   }
 
@@ -1638,16 +1638,25 @@ export default function Home() {
         {teachers.length === 0
           ? <p className="text-sm text-gray-400 text-center mt-16">등록된 선생님이 없어요.</p>
           : <div className="flex flex-col gap-2">
-            {teachers.map(t => (
-              <button key={t.id} onClick={() => selectMyTeacher(t)}
-                className="btn w-full p-4 border border-gray-200 dark:border-gray-700 rounded-xl text-left flex items-center justify-between hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <div>
-                  <p className="font-semibold">{t.name} 선생님</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.subject} · 📍 {t.location}</p>
-                </div>
-                <span className="text-blue-400 text-lg">→</span>
-              </button>
-            ))}
+            {teachers.map(t => {
+              const taken = !!t.user_id
+              return (
+                <button key={t.id} onClick={() => !taken && selectMyTeacher(t)} disabled={taken}
+                  className={`btn w-full p-4 border rounded-xl text-left flex items-center justify-between transition-colors
+                    ${taken
+                      ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 opacity-50 cursor-not-allowed'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}>
+                  <div>
+                    <p className={`font-semibold ${taken ? 'text-gray-400 dark:text-gray-600' : ''}`}>{t.name} 선생님</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.subject} · 📍 {t.location}</p>
+                    {taken && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">이미 선택된 선생님이에요</p>}
+                  </div>
+                  {taken
+                    ? <span className="text-gray-300 dark:text-gray-600 text-sm">✓</span>
+                    : <span className="text-blue-400 text-lg">→</span>}
+                </button>
+              )
+            })}
           </div>
         }
 
@@ -3387,27 +3396,27 @@ export default function Home() {
 
       {/* ── 출석 도장 팝업 ── */}
       {showAttendance && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] px-6 animate-fade-in"
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] px-4 animate-fade-in"
           onClick={() => setShowAttendance(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 w-full max-w-xs shadow-2xl text-center animate-pop-in"
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-center animate-pop-in"
             onClick={e => e.stopPropagation()}>
 
             {/* 도장 애니메이션 */}
             <div className="relative mb-4 flex justify-center">
               <div
-                className={`w-28 h-28 rounded-full border-4 border-red-400 flex items-center justify-center transition-all duration-500 cursor-pointer select-none
+                className={`w-24 h-24 rounded-full border-4 border-red-400 flex items-center justify-center transition-all duration-500 cursor-pointer select-none
                   ${attendanceStamped
                     ? 'bg-red-50 dark:bg-red-900/20 scale-95 opacity-90'
                     : 'bg-white dark:bg-gray-800 scale-100 shadow-lg hover:scale-105 active:scale-90'}`}
                 onClick={() => setAttendanceStamped(true)}
               >
-                <div className={`text-5xl transition-all duration-300 ${attendanceStamped ? 'scale-90 opacity-80' : 'scale-100'}`}>
+                <div className={`text-4xl transition-all duration-300 ${attendanceStamped ? 'scale-90 opacity-80' : 'scale-100'}`}>
                   📅
                 </div>
                 {attendanceStamped && (
                   <div className="absolute inset-0 flex items-center justify-center animate-pop-in">
-                    <div className="w-24 h-24 rounded-full border-4 border-red-500 flex items-center justify-center bg-red-50 dark:bg-red-900/20">
-                      <span className="text-red-500 font-black text-lg tracking-tight">출석!</span>
+                    <div className="w-20 h-20 rounded-full border-4 border-red-500 flex items-center justify-center bg-red-50 dark:bg-red-900/20">
+                      <span className="text-red-500 font-black text-base tracking-tight">출석!</span>
                     </div>
                   </div>
                 )}
@@ -3425,6 +3434,53 @@ export default function Home() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                   이번 달 <span className="font-bold text-blue-500">{monthlyCount}일</span> 출석했어요
                 </p>
+
+                {/* 이번 달 출석 캘린더 */}
+                {(() => {
+                  const now = new Date()
+                  const year = now.getFullYear()
+                  const month = now.getMonth()
+                  const today = now.toISOString().split('T')[0]
+                  const firstDay = new Date(year, month, 1).getDay()
+                  const daysInMonth = new Date(year, month + 1, 0).getDate()
+                  const weeks: (number | null)[][] = []
+                  let week: (number | null)[] = Array(firstDay).fill(null)
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    week.push(d)
+                    if (week.length === 7) { weeks.push(week); week = [] }
+                  }
+                  if (week.length > 0) weeks.push([...week, ...Array(7 - week.length).fill(null)])
+                  return (
+                    <div className="mb-3 bg-gray-50 dark:bg-gray-800 rounded-2xl p-3">
+                      <div className="grid grid-cols-7 mb-1">
+                        {['일','월','화','수','목','금','토'].map(d => (
+                          <div key={d} className="text-center text-xs text-gray-400 dark:text-gray-500 font-medium">{d}</div>
+                        ))}
+                      </div>
+                      {weeks.map((week, wi) => (
+                        <div key={wi} className="grid grid-cols-7">
+                          {week.map((d, di) => {
+                            if (!d) return <div key={di} />
+                            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+                            const isToday = dateStr === today
+                            const attended = attendedDates.has(dateStr)
+                            return (
+                              <div key={di} className="flex items-center justify-center py-0.5">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium
+                                  ${isToday && attended ? 'bg-red-500 text-white' :
+                                    attended ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' :
+                                    isToday ? 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300' :
+                                    'text-gray-500 dark:text-gray-400'}`}>
+                                  {attended && !isToday ? '✓' : d}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
 
                 {/* 15일 달성 진행바 */}
                 <div className="mb-3">

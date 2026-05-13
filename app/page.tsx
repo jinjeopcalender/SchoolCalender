@@ -22,7 +22,7 @@ const getCategoryColor = (cat: string) => CATEGORY_STYLES[cat]?.color ?? '#8b5cf
 
 const SUBJECTS = ['국어', '수학', '영어', '과학', '사회', '역사', '도덕', '체육', '음악', '미술', '기술·가정', '정보', '한문', '기타']
 
-const INPUT = 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm'
+const INPUT = 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2.5 w-full rounded-xl text-sm appearance-none'
 const BTN_GRAY = 'flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm'
 const BTN_BLUE = 'btn flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium shadow-md shadow-blue-200 dark:shadow-blue-900/30'
 const BTN_GREEN = 'btn flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium shadow-md shadow-green-200 dark:shadow-green-900/30'
@@ -38,9 +38,21 @@ export default function Home() {
   const [myTeacherRow, setMyTeacherRow] = useState<any>(null)
   const [showGradePicker, setShowGradePicker] = useState(false)
   const [showTeacherPicker, setShowTeacherPicker] = useState(false)
+  const [showTeacherSelfAdd, setShowTeacherSelfAdd] = useState(false)
+  const [selfAddName, setSelfAddName] = useState('')
+  const [selfAddSubject, setSelfAddSubject] = useState(SUBJECTS[0])
+  const [selfAddLocation, setSelfAddLocation] = useState('')
+  const [selfAddLoading, setSelfAddLoading] = useState(false)
   const [showTeacherAuth, setShowTeacherAuth] = useState(false)
   const [teacherAuthPw, setTeacherAuthPw] = useState('')
   const [teacherAuthError, setTeacherAuthError] = useState('')
+
+  // 출석
+  const [showAttendance, setShowAttendance] = useState(false)
+  const [attendanceStamped, setAttendanceStamped] = useState(false)
+  const [monthlyCount, setMonthlyCount] = useState(0)
+  const [hasBadge, setHasBadge] = useState(false)
+  const [isNewBadge, setIsNewBadge] = useState(false)
 
   // 캘린더
   const [events, setEvents] = useState<any[]>([])
@@ -156,6 +168,8 @@ export default function Home() {
 
   // 토스트
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
+  const [showKakaoBanner, setShowKakaoBanner] = useState(false)
+  const [kakaoInstalled, setKakaoInstalled] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -230,6 +244,7 @@ export default function Home() {
   const [showUserViewer, setShowUserViewer] = useState(false)
   const [allUsers, setAllUsers] = useState<any[]>([])
   const [approvedStats, setApprovedStats] = useState<Record<string, number>>({})
+  const [attendanceStats, setAttendanceStats] = useState<Record<string, number>>({})
   const [viewingUser, setViewingUser] = useState<any>(null)
   const [viewingEvents, setViewingEvents] = useState<any[]>([])
   const [viewingLoading, setViewingLoading] = useState(false)
@@ -303,15 +318,16 @@ export default function Home() {
         await loadTeachers()
         await loadNotices()
         const { data: schoolPosts } = await supabase.from('posts')
-          .select('id, title, content, category, default_date, end_date')
+          .select('id, title, content, category, default_date, end_date, grade')
           .eq('status', 'approved').in('category', ['학교행사', '휴일'])
         const schoolEvents = (schoolPosts || []).map(p => {
           const endExclusive = p.end_date
             ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
             : undefined
+          const gradeLabel = p.grade ? `[${p.grade}학년] ` : ''
           return {
-            id: p.id, title: p.title, content: p.content, category: p.category,
-            date: p.default_date, start: p.default_date, end: endExclusive,
+            id: p.id, title: gradeLabel + p.title, content: p.content, category: p.category,
+            grade: p.grade, date: p.default_date, start: p.default_date, end: endExclusive,
             color: getCategoryColor(p.category),
             backgroundColor: getCategoryColor(p.category),
             borderColor: getCategoryColor(p.category),
@@ -364,6 +380,9 @@ export default function Home() {
       setUserGrade(ud?.grade ?? null)
       await loadCalendarData(cu.id, ud?.grade ?? 0, admin)
 
+      // 출석 체크 (선생님/관리자도 포함)
+      checkAttendance(cu.id)
+
       // 게시판 초기 학년 설정
       if (ud?.grade) setBoardGrade(ud.grade)
 
@@ -387,10 +406,51 @@ export default function Home() {
 
   // ── 데이터 로드 ───────────────────────────────────────────────
   // ── 슈퍼어드민: 전체 유저 목록 로드 ──
+  // ── 출석 체크 ──
+  const checkAttendance = async (userId: string) => {
+    const today = new Date().toISOString().split('T')[0]
+    const thisMonth = today.slice(0, 7)
+
+    // 오늘 이미 출석했는지 확인
+    const { data: todayRecord } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .maybeSingle()
+
+    if (todayRecord) return // 오늘 이미 출석함
+
+    // 출석 기록 INSERT
+    await supabase.from('attendance').insert({ user_id: userId, date: today, month: thisMonth })
+
+    // 이번 달 출석일수 계산
+    const { count } = await supabase
+      .from('attendance')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('month', thisMonth)
+
+    const cnt = count ?? 0
+    setMonthlyCount(cnt)
+
+    // 15일 달성 여부
+    const prevCount = cnt - 1
+    const newBadge = cnt >= 15 && prevCount < 15
+    setHasBadge(cnt >= 15)
+    setIsNewBadge(newBadge)
+
+    // 출석 도장 화면 표시
+    setAttendanceStamped(false)
+    setShowAttendance(true)
+  }
+
   const loadAllUsers = async () => {
-    const [{ data: users }, { data: posts }] = await Promise.all([
+    const thisMonth = new Date().toISOString().slice(0, 7)
+    const [{ data: users }, { data: posts }, { data: attData }] = await Promise.all([
       supabase.from('users').select('id, name, role, grade, last_seen_at').order('role').order('name'),
       supabase.from('posts').select('created_by').eq('status', 'approved').eq('is_user_generated', true),
+      supabase.from('attendance').select('user_id').eq('month', thisMonth),
     ])
     setAllUsers(users || [])
     const stats: Record<string, number> = {}
@@ -398,6 +458,11 @@ export default function Home() {
       stats[p.created_by] = (stats[p.created_by] ?? 0) + 1
     }
     setApprovedStats(stats)
+    const attStats: Record<string, number> = {}
+    for (const a of (attData || [])) {
+      attStats[a.user_id] = (attStats[a.user_id] ?? 0) + 1
+    }
+    setAttendanceStats(attStats)
   }
 
   // ── 슈퍼어드민: 특정 유저 캘린더 로드 ──
@@ -903,6 +968,33 @@ export default function Home() {
     await loadCalendarData(user.id, userGrade ?? 0, false)
   }
 
+  const selfAddTeacher = async () => {
+    if (!user) return
+    if (!selfAddName.trim() || !selfAddLocation.trim()) {
+      showToast('성함과 위치를 입력해주세요!', 'error'); return
+    }
+    setSelfAddLoading(true)
+    // 선생님 row INSERT + user_id 바로 연결
+    const { data: newT, error } = await supabase.from('teachers')
+      .insert({
+        name: selfAddName.trim(),
+        subject: selfAddSubject || SUBJECTS[0],
+        location: selfAddLocation.trim(),
+        user_id: user.id,
+      })
+      .select().single()
+    if (error) { showToast(error.message, 'error'); setSelfAddLoading(false); return }
+    setMyTeacherRow(newT)
+    setShowTeacherSelfAdd(false)
+    setShowTeacherPicker(false)
+    setSelfAddName(''); setSelfAddSubject(''); setSelfAddLocation('')
+    await loadTeachers()
+    await loadMessages(user.id, false, true, newT)
+    await loadCalendarData(user.id, userGrade ?? 0, false)
+    showToast('등록됐어요! 관리자 확인 후 정식 등록될 수 있어요 😊')
+    setSelfAddLoading(false)
+  }
+
   // ── 선생님 관리 ───────────────────────────────────────────────
   const resetTeacherForm = () => { setTeacherName(''); setTeacherSubject(SUBJECTS[0]); setTeacherLocation(''); setEditingTeacher(null) }
   const openAddTeacher = () => { resetTeacherForm(); setShowTeacherForm(true) }
@@ -1095,7 +1187,21 @@ export default function Home() {
     setShowTeacherPicker(true)
   }
 
-  const login = async () => supabase.auth.signInWithOAuth({ provider: 'google', options: { skipBrowserRedirect: false, queryParams: { prompt: 'select_account' } } })
+  // 카카오톡 인앱 브라우저 감지
+  const isKakaoInApp = () => {
+    if (typeof window === 'undefined') return false
+    const ua = navigator.userAgent.toLowerCase()
+    return ua.includes('kakaotalk') || ua.includes('kakao')
+  }
+
+  const login = async () => {
+    if (isKakaoInApp()) {
+      // 카카오톡 인앱 브라우저에서는 외부 브라우저로 유도
+      setShowKakaoBanner(true)
+      return
+    }
+    supabase.auth.signInWithOAuth({ provider: 'google', options: { skipBrowserRedirect: false, queryParams: { prompt: 'select_account' } } })
+  }
   const logout = async () => {
     supabase.removeAllChannels()
     await supabase.auth.signOut()
@@ -1447,8 +1553,9 @@ export default function Home() {
       <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-4 py-10 max-w-lg mx-auto">
         <h1 className="text-xl font-bold mb-1">👩‍🏫 본인 확인</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">목록에서 본인이 누구인지 선택해주세요</p>
+
         {teachers.length === 0
-          ? <p className="text-sm text-gray-400 text-center mt-16">등록된 선생님이 없어요.<br />관리자에게 문의해주세요.</p>
+          ? <p className="text-sm text-gray-400 text-center mt-16">등록된 선생님이 없어요.</p>
           : <div className="flex flex-col gap-2">
             {teachers.map(t => (
               <button key={t.id} onClick={() => selectMyTeacher(t)}
@@ -1462,6 +1569,69 @@ export default function Home() {
             ))}
           </div>
         }
+
+        {/* 직접 추가 유도 */}
+        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-3">목록에 이름이 없나요?</p>
+          <button onClick={() => setShowTeacherSelfAdd(true)}
+            className="btn w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors">
+            ✏️ 직접 추가하기
+          </button>
+        </div>
+
+        {/* 직접 추가 폼 */}
+        {showTeacherSelfAdd && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in">
+            <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-t-2xl p-5 w-full max-w-lg animate-slide-up">
+              <h3 className="font-bold text-base mb-1">✏️ 선생님 직접 추가</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                성함과 위치를 입력하면 바로 사용할 수 있어요
+              </p>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">성함 *</label>
+                  <input
+                    placeholder="예) 홍길동"
+                    value={selfAddName}
+                    onChange={e => setSelfAddName(e.target.value)}
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">과목</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SUBJECTS.map(s => (
+                      <button key={s} type="button" onClick={() => setSelfAddSubject(s)}
+                        className={`btn px-3 py-1.5 rounded-xl text-xs border-2 transition-colors ${selfAddSubject === s ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">위치 *</label>
+                  <input
+                    placeholder="예) 3층 수학실"
+                    value={selfAddLocation}
+                    onChange={e => setSelfAddLocation(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && selfAddTeacher()}
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => { setShowTeacherSelfAdd(false); setSelfAddName(''); setSelfAddSubject(SUBJECTS[0]); setSelfAddLocation('') }}
+                  className="btn flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium">
+                  취소
+                </button>
+                <button onClick={selfAddTeacher} disabled={selfAddLoading}
+                  className="btn flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium shadow-md disabled:opacity-60">
+                  {selfAddLoading ? '등록 중...' : '추가하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -1675,8 +1845,8 @@ export default function Home() {
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
                     <span className="text-xl">🔒</span>
                     <div>
-                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">자세한 일정은 로그인 후 확인</p>
-                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">로그인을 해야 정확한 일정을 확인할 수 있어요</p>
+                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">수행평가·기타 일정은 로그인 후 확인</p>
+                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">학교 일정과 선생님 위치는 지금 바로 볼 수 있어요</p>
                     </div>
                   </div>
                   <div className="flex gap-2 mb-3">
@@ -2994,6 +3164,34 @@ export default function Home() {
               /* 유저 목록 + 승인 랭킹 */
               <div className="overflow-y-auto flex-1">
 
+                {/* 출석 랭킹 (이번 달) */}
+                {Object.keys(attendanceStats).length > 0 && (
+                  <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">📅 이번 달 출석 랭킹 <span className="font-normal text-blue-500">(15일↑ 🏅 간식 대상)</span></p>
+                    <div className="flex flex-col gap-1.5">
+                      {allUsers
+                        .filter(u => attendanceStats[u.id])
+                        .sort((a, b) => (attendanceStats[b.id] ?? 0) - (attendanceStats[a.id] ?? 0))
+                        .slice(0, 10)
+                        .map((u, i) => (
+                          <div key={u.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm w-5 text-center">
+                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+                              </span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{u.name}</span>
+                              {(attendanceStats[u.id] ?? 0) >= 15 && <span className="text-xs">🏅</span>}
+                            </div>
+                            <span className={`text-sm font-bold ${(attendanceStats[u.id] ?? 0) >= 15 ? 'text-yellow-500' : 'text-blue-500'}`}>
+                              {attendanceStats[u.id]}일
+                            </span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+
                 {/* 승인 횟수 랭킹 */}
                 {Object.keys(approvedStats).length > 0 && (
                   <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
@@ -3036,10 +3234,15 @@ export default function Home() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                            {u.role === 'superadmin' ? '👑 슈퍼관리자' : u.role === 'admin' ? '🛠 관리자' : u.role === 'teacher' ? '👩‍🏫 선생님' : `${u.grade ?? '?'}학년`}
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span>{u.role === 'superadmin' ? '👑 슈퍼관리자' : u.role === 'admin' ? '🛠 관리자' : u.role === 'teacher' ? '👩‍🏫 선생님' : `${u.grade ?? '?'}학년`}</span>
+                            {attendanceStats[u.id] && (
+                              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${(attendanceStats[u.id] ?? 0) >= 15 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
+                                {(attendanceStats[u.id] ?? 0) >= 15 ? '🏅' : '📅'} {attendanceStats[u.id]}일
+                              </span>
+                            )}
                             {u.last_seen_at && (
-                              <span className="ml-1.5 text-gray-300 dark:text-gray-600">
+                              <span className="text-gray-300 dark:text-gray-600">
                                 · {(() => {
                                   const diff = Date.now() - new Date(u.last_seen_at).getTime()
                                   const min = Math.floor(diff / 60000)
@@ -3096,6 +3299,175 @@ export default function Home() {
                   <p className="text-xs text-purple-500 text-center">👁 읽기 전용 — 수정 불가</p>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 출석 도장 팝업 ── */}
+      {showAttendance && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] px-6 animate-fade-in"
+          onClick={() => setShowAttendance(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 w-full max-w-xs shadow-2xl text-center animate-pop-in"
+            onClick={e => e.stopPropagation()}>
+
+            {/* 도장 애니메이션 */}
+            <div className="relative mb-4 flex justify-center">
+              <div
+                className={`w-28 h-28 rounded-full border-4 border-red-400 flex items-center justify-center transition-all duration-500 cursor-pointer select-none
+                  ${attendanceStamped
+                    ? 'bg-red-50 dark:bg-red-900/20 scale-95 opacity-90'
+                    : 'bg-white dark:bg-gray-800 scale-100 shadow-lg hover:scale-105 active:scale-90'}`}
+                onClick={() => setAttendanceStamped(true)}
+              >
+                <div className={`text-5xl transition-all duration-300 ${attendanceStamped ? 'scale-90 opacity-80' : 'scale-100'}`}>
+                  📅
+                </div>
+                {attendanceStamped && (
+                  <div className="absolute inset-0 flex items-center justify-center animate-pop-in">
+                    <div className="w-24 h-24 rounded-full border-4 border-red-500 flex items-center justify-center bg-red-50 dark:bg-red-900/20">
+                      <span className="text-red-500 font-black text-lg tracking-tight">출석!</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!attendanceStamped ? (
+              <>
+                <p className="font-bold text-base text-gray-900 dark:text-gray-100 mb-1">오늘도 왔어요! 🎉</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">도장을 눌러 출석 체크하세요</p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-base text-gray-900 dark:text-gray-100 mb-1">출석 완료!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  이번 달 <span className="font-bold text-blue-500">{monthlyCount}일</span> 출석했어요
+                </p>
+
+                {/* 15일 달성 진행바 */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
+                    <span>간식 목표</span>
+                    <span>{Math.min(monthlyCount, 15)} / 15일</span>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-700 ${monthlyCount >= 15 ? 'bg-yellow-400' : 'bg-blue-400'}`}
+                      style={{ width: `${Math.min((monthlyCount / 15) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* 뱃지 */}
+                {hasBadge && (
+                  <div className={`mb-3 p-3 rounded-2xl ${isNewBadge ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                    <p className="text-lg mb-0.5">🏅</p>
+                    <p className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                      {isNewBadge ? '이번 달 간식 대상자! 🎊' : '이번 달 간식 대상자 ✓'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">15일 출석 달성 — 관리자가 간식을 드려요</p>
+                  </div>
+                )}
+
+                {!hasBadge && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                    15일 출석 시 간식 대상자가 돼요 🍬
+                  </p>
+                )}
+
+                <button onClick={() => setShowAttendance(false)}
+                  className="btn w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-sm font-medium">
+                  닫기
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 카카오톡 인앱 브라우저 안내 팝업 */}
+      {showKakaoBanner && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] px-5 animate-fade-in">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
+
+            {!kakaoInstalled ? (
+              <>
+                <div className="text-center mb-5">
+                  <p className="text-4xl mb-3">📲</p>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-2">앱 설치 후 로그인해주세요</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    카카오톡에서는 구글 로그인이 불가능해요.<br />
+                    <span className="font-semibold text-blue-500">홈 화면에 앱을 설치</span>하는 게<br />
+                    가장 좋은 방법이에요!
+                  </p>
+                </div>
+
+                {/* iPhone — Safari 경유 필수 */}
+                <div className="p-3.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl mb-2">
+                  <p className="font-semibold text-blue-700 dark:text-blue-300 text-sm mb-1.5">📱 iPhone 사용자</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                    ① 하단 <span className="font-bold">··· → Safari로 열기</span><br />
+                    ② Safari에서 하단 <span className="font-bold">공유(□↑) → 홈 화면에 추가</span>
+                  </p>
+                </div>
+
+                {/* Android — 바로 설치 가능 */}
+                <div className="p-3.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl mb-4">
+                  <p className="font-semibold text-blue-700 dark:text-blue-300 text-sm mb-1.5">🤖 Android 사용자</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                    우측 상단 <span className="font-bold">··· → 홈 화면에 추가</span>
+                  </p>
+                </div>
+
+                {/* 링크 복사 대안 */}
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl mb-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center leading-relaxed">
+                    설치가 어렵다면 링크를 복사해서<br />브라우저에 붙여넣기 해도 돼요
+                  </p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(window.location.href).then(() => {
+                        showToast('링크가 복사됐어요! 브라우저에 붙여넣기 해주세요 🔗')
+                      }).catch(() => {
+                        showToast('주소창에서 URL을 직접 복사해주세요', 'info')
+                      })
+                    }}
+                    className="btn w-full mt-2 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-500 dark:text-gray-400">
+                    🔗 링크 복사하기
+                  </button>
+                </div>
+
+                <button onClick={() => setKakaoInstalled(true)}
+                  className="btn w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-sm font-bold shadow-md">
+                  ✅ 설치했어요!
+                </button>
+                <button onClick={() => setShowKakaoBanner(false)}
+                  className="btn w-full py-2 mt-1.5 text-gray-400 text-sm">
+                  나중에 할게요
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-center mb-5">
+                  <p className="text-4xl mb-3">🎉</p>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-2">설치 완료!</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    이제 카카오톡을 나가서<br />
+                    <span className="font-semibold text-blue-500">홈 화면의 클래스톡 아이콘</span>으로<br />
+                    접속하면 구글 로그인이 가능해요!
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl mb-4 text-center">
+                  <p className="text-3xl mb-1">📅</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">클래스톡</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">홈 화면에서 이 아이콘을 눌러주세요</p>
+                </div>
+                <button onClick={() => { setShowKakaoBanner(false); setKakaoInstalled(false) }}
+                  className="btn w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-sm font-bold">
+                  확인
+                </button>
+              </>
             )}
           </div>
         </div>

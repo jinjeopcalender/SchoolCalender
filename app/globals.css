@@ -168,3 +168,17 @@ body {
   .notice-md strong, .notice-md b { color: #f9fafb; }
   .notice-md h2, .notice-md h3 { color: #f9fafb; }
 }
+/* iOS Safari date input 스타일 통일 */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 2.5rem;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  padding: 0;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+}

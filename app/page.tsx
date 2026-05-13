@@ -404,6 +404,25 @@ export default function Home() {
     if (activeTab === 'board' && user) loadBoardPosts(boardGrade)
   }, [boardGrade, activeTab])
 
+  // 게시판 Realtime
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase.channel('board-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_posts' },
+        async (payload) => {
+          if (activeTab !== 'board') return
+          const { data: p } = await supabase.from('board_posts')
+            .select('*, board_comments(count)').eq('id', payload.new.id).single()
+          if (p) setBoardPosts(prev => prev.some(x => x.id === p.id) ? prev : [p, ...prev])
+        })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'board_posts' },
+        (payload) => setBoardPosts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'board_posts' },
+        (payload) => setBoardPosts(prev => prev.filter(p => p.id !== (payload.old as any).id)))
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user, activeTab])
+
   // ── 데이터 로드 ───────────────────────────────────────────────
   // ── 슈퍼어드민: 전체 유저 목록 로드 ──
   // ── 출석 체크 ──
@@ -695,6 +714,33 @@ export default function Home() {
             }])
           }
         })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_calendar', filter: `user_id=eq.${uid}` },
+        async (payload) => {
+          const n = payload.new
+          if (n.is_personal) {
+            // 개인 일정 수정
+            const endExclusive = n.end_date
+              ? (() => { const d = new Date(n.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+              : undefined
+            setEvents(prev => prev.map(e => e.cal_id === n.id
+              ? { ...e, title: n.title, content: n.content, date: n.assigned_date, start: n.assigned_date, end: endExclusive, color: n.color || '#f59e0b', backgroundColor: n.color || '#f59e0b', borderColor: n.color || '#f59e0b' }
+              : e))
+          } else {
+            // 일반 일정 날짜 수정
+            const endExclusive = n.end_date
+              ? (() => { const d = new Date(n.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+              : undefined
+            setEvents(prev => prev.map(e => e.id === n.post_id
+              ? { ...e, date: n.assigned_date, start: n.assigned_date, end: endExclusive }
+              : e))
+          }
+        })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_calendar', filter: `user_id=eq.${uid}` },
+        (payload) => {
+          const old = payload.old as any
+          // 개인 일정 삭제
+          setEvents(prev => prev.filter(e => e.cal_id !== old.id && e.id !== old.post_id))
+        })
       .subscribe()
 
     supabase.channel('teachers-channel')
@@ -709,6 +755,24 @@ export default function Home() {
         (payload) => setTeachers(prev => prev.filter(t => t.id !== (payload.old as any).id)))
       .subscribe()
 
+    supabase.channel('notices-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notices' },
+        (payload) => {
+          if (!payload.new.is_active) return
+          setAllNotices(prev => prev.some(n => n.id === payload.new.id) ? prev : [payload.new, ...prev])
+        })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notices' },
+        (payload) => {
+          if (!payload.new.is_active) {
+            setAllNotices(prev => prev.filter(n => n.id !== payload.new.id))
+          } else {
+            setAllNotices(prev => prev.map(n => n.id === payload.new.id ? { ...n, ...payload.new } : n))
+          }
+        })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'notices' },
+        (payload) => setAllNotices(prev => prev.filter(n => n.id !== (payload.old as any).id)))
+      .subscribe()
+
     if (admin) {
       supabase.channel('posts-channel')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' },
@@ -719,9 +783,26 @@ export default function Home() {
     } else {
       supabase.channel('posts-approved-channel')
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' },
-          (payload) => {
-            if (payload.new.created_by === uid && payload.new.status === 'approved' && payload.new.is_user_generated) {
+          async (payload) => {
+            const p = payload.new
+            // 내 일정 승인 → 카운트 올리고 캘린더에도 즉시 추가
+            if (p.created_by === uid && p.status === 'approved' && p.is_user_generated) {
               setApprovedCount(prev => prev + 1)
+              const endExclusive = p.end_date
+                ? (() => { const d = new Date(p.end_date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+                : undefined
+              setEvents(prev => prev.some(e => e.id === p.id) ? prev : [...prev, {
+                id: p.id, title: p.title, content: p.content, category: p.category,
+                created_by: p.created_by, grade: p.grade,
+                date: p.default_date, start: p.default_date, end: endExclusive,
+                color: getCategoryColor(p.category),
+                backgroundColor: getCategoryColor(p.category),
+                borderColor: getCategoryColor(p.category),
+              }])
+            }
+            // 거절된 경우 캘린더에서 제거
+            if (p.created_by === uid && p.status === 'rejected') {
+              setEvents(prev => prev.filter(e => e.id !== p.id))
             }
           })
         .subscribe()

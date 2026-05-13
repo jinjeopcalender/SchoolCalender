@@ -1895,12 +1895,7 @@ export default function Home() {
       )}
 
       {/* ? 도움말 버튼 */}
-      {user && !showTutorial && activeTab !== 'board' && (
-        <button onClick={() => { setTutorialStep(0); setShowTutorial(true) }}
-          className="fixed right-4 bottom-20 md:bottom-8 z-[80] w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-lg font-bold btn">
-          ?
-        </button>
-      )}
+
 
       {!user ? (
         /* ── 비로그인 ── */
@@ -2114,7 +2109,7 @@ export default function Home() {
                     </button>
                   )}
                 </div>
-                {/* 두 번째 줄: 유저(superadmin) + 설정 */}
+                {/* 두 번째 줄: 유저(superadmin) + 출석 + 설정 */}
                 <div className="flex items-center gap-2 md:w-full">
                   {isSuperAdmin && (
                     <button onClick={() => { setShowUserViewer(true); loadAllUsers() }}
@@ -2122,6 +2117,21 @@ export default function Home() {
                       👑<span className="hidden md:inline ml-1 text-xs">유저</span>
                     </button>
                   )}
+                  <button onClick={async () => {
+                    if (!user) return
+                    const thisMonth = new Date().toISOString().slice(0, 7)
+                    const { data } = await supabase.from('attendance').select('date').eq('user_id', user.id).eq('month', thisMonth)
+                    const dates = new Set((data || []).map((r: any) => r.date))
+                    setAttendedDates(dates)
+                    setMonthlyCount(dates.size)
+                    setHasBadge(dates.size >= 15)
+                    setAttendanceStamped(true)
+                    setShowAttendance(true)
+                  }}
+                    className="btn relative px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
+                    📅<span className="hidden md:inline ml-1 text-xs">출석</span>
+                    {hasBadge && <span className="absolute -top-1 -right-1 text-xs">🏅</span>}
+                  </button>
                   <button onClick={() => setShowSettings(true)}
                     className="btn px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm flex-1 text-center whitespace-nowrap">
                     ⚙️<span className="hidden md:inline ml-1 text-xs">설정</span>
@@ -2444,9 +2454,15 @@ export default function Home() {
               )}
             </div>
 
+            {/* 튜토리얼 다시 보기 */}
+            <button onClick={() => { setShowSettings(false); setTutorialStep(0); setShowTutorial(true) }}
+              className="btn mt-4 w-full py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-xl text-sm font-medium">
+              ❓ 튜토리얼 다시 보기
+            </button>
+
             {/* 로그아웃 */}
             <button onClick={() => { setShowSettings(false); logout() }}
-              className="btn mt-4 w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl text-sm font-medium">
+              className="btn mt-2 w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl text-sm font-medium">
               로그아웃
             </button>
 

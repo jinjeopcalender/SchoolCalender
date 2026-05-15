@@ -128,6 +128,14 @@ export default function Home() {
     if (isIOS && !isStandalone) {
       setTimeout(() => setShowIOSInstall(true), 1500)
     }
+
+    // 카카오톡 인앱 브라우저 감지 → 진입 즉시 안내 팝업
+    const ua = navigator.userAgent.toLowerCase()
+    const isKakao = ua.includes('kakaotalk') || ua.includes('kakao')
+    if (isKakao) {
+      setTimeout(() => setShowKakaoBanner(true), 500)
+    }
+
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -669,7 +677,8 @@ export default function Home() {
     if (pendingNotifs.length > 0) setShowNotifBanner(true)
 
     if (admin) {
-      const { data: pending } = await supabase.from('posts').select('*').eq('status', 'pending')
+      const { data: pending } = await supabase.from('posts')
+        .select('*').eq('status', 'pending').order('created_at', { ascending: false })
       setPendingPosts(pending || [])
     }
 
@@ -1398,7 +1407,7 @@ export default function Home() {
 
     if (isTeacher) {
       const { data: targetUsers } = await supabase.from('users').select('id')
-        .eq('grade', targetGrade).neq('role', 'teacher').neq('role', 'admin')
+        .eq('grade', targetGrade).neq('role', 'teacher').neq('role', 'admin').neq('role', 'superadmin')
       if (targetUsers?.length) {
         await supabase.from('notifications').insert(
           targetUsers.map(u => ({ user_id: u.id, post_id: postData.id, is_read: false, status: 'pending' }))
@@ -1421,7 +1430,7 @@ export default function Home() {
       default_date: schoolEventDate, end_date: endDate, category: schoolEventType, grade: schoolEventGrade, is_user_generated: false,
     }).select().single()
     if (error) { showToast(error.message, 'error'); return }
-    let q = supabase.from('users').select('id')
+    let q = supabase.from('users').select('id').neq('role', 'teacher').neq('role', 'admin').neq('role', 'superadmin')
     if (schoolEventGrade) q = q.eq('grade', schoolEventGrade)
     const { data: targetUsers } = await q
     if (targetUsers?.length)

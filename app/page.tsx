@@ -672,8 +672,15 @@ export default function Home() {
     const { data: notifData } = await supabase.from('notifications')
       .select('*, posts(id,title,content,default_date,end_date,category)')
       .eq('user_id', uid).eq('is_read', false).neq('status', 'dismissed').neq('status', 'accepted')
-    const pendingNotifs = (notifData || []).filter((n: any) => n.status === 'pending')
-    setNotifications(notifData || [])
+    const validNotifs = (notifData || []).filter((n: any) => !!n.posts)
+    const pendingNotifs = validNotifs.filter((n: any) => n.status === 'pending')
+    setNotifications(validNotifs)
+    // posts가 null인 알림은 dismissed 처리
+    const invalidNotifs = (notifData || []).filter((n: any) => !n.posts)
+    if (invalidNotifs.length > 0) {
+      await supabase.from('notifications').update({ status: 'dismissed', is_read: true })
+        .in('id', invalidNotifs.map((n: any) => n.id))
+    }
     if (pendingNotifs.length > 0) setShowNotifBanner(true)
 
     if (admin) {
@@ -1519,6 +1526,7 @@ export default function Home() {
       if (!confirm('이 학교 일정을 삭제할까요? 모든 학생의 캘린더에서 삭제됩니다.')) return
       await supabase.from('user_calendar').delete().eq('post_id', eventId)
       await supabase.from('posts').update({ status: 'rejected' }).eq('id', eventId)
+      await supabase.from('notifications').update({ status: 'dismissed', is_read: true }).eq('post_id', eventId)
     } else if (isAdmin || isTeacher) {
       // 관리자/선생님: 모든 유저 캘린더에서 삭제 + post 거절 처리
       if (!confirm('이 일정을 삭제할까요? 모든 학생의 캘린더에서 삭제됩니다.')) return
@@ -1533,6 +1541,7 @@ export default function Home() {
   }
 
   const acceptNotification = (notif: any) => {
+    if (!notif.posts) { showToast('삭제된 일정이에요', 'error'); return }
     const hasRange = !!notif.posts.end_date
     setPendingPostId(notif.posts.id); pendingPostTitleRef.current = notif.posts.title
     pendingNotifIdRef.current = notif.id; pendingDefaultDateRef.current = notif.posts.default_date
@@ -1571,7 +1580,9 @@ export default function Home() {
   const dismissNotification = async (notif: any) => {
     if (!user) return
     await supabase.from('notifications').update({ status: 'dismissed', is_read: true }).eq('id', notif.id)
-    await supabase.from('user_actions').insert({ user_id: user.id, post_id: notif.posts.id, action: 'dismissed' })
+    if (notif.posts?.id) {
+      await supabase.from('user_actions').insert({ user_id: user.id, post_id: notif.posts.id, action: 'dismissed' })
+    }
     setNotifications(prev => prev.filter(n => n.id !== notif.id))
   }
 
@@ -2883,17 +2894,26 @@ export default function Home() {
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">새 알림이 없어요</p>
                 : activeNotifications.map(notif => (
                   <div key={notif.id} className="card-hover p-3 border border-gray-200 dark:border-gray-700 rounded-xl mt-2">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
-                    <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}{notif.posts.end_date ? ` ~ ${notif.posts.end_date}` : ''}</p>
-                    <div className="flex flex-col gap-1.5 mt-2">
-                      <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
-                      <div className="flex gap-1.5">
-                        <button onClick={() => holdNotification(notif)} className="flex-1 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">⏸ 보류</button>
-                        <button onClick={() => dismissNotification(notif)} className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
+                    {!notif.posts ? (
+                      <div>
+                        <p className="text-sm text-gray-400 dark:text-gray-500">삭제된 일정이에요</p>
+                        <button onClick={() => dismissNotification(notif)} className="mt-2 w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 알림 지우기</button>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
+                        <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">기본 날짜: {notif.posts.default_date}{notif.posts.end_date ? ` ~ ${notif.posts.end_date}` : ''}</p>
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => holdNotification(notif)} className="flex-1 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">⏸ 보류</button>
+                            <button onClick={() => dismissNotification(notif)} className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
             )}
@@ -2902,6 +2922,9 @@ export default function Home() {
                 ? <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">보류된 알림이 없어요</p>
                 : heldNotifications.map(notif => (
                   <div key={notif.id} className="card-hover p-3 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl mt-2">
+                    {!notif.posts ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500">삭제된 일정이에요</p>
+                    ) : (<>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(notif.posts.category)}`}>{notif.posts.category}</span>
                     <p className="font-medium text-sm mt-1">{notif.posts.title}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.posts.content}</p>
@@ -2910,6 +2933,7 @@ export default function Home() {
                       <button onClick={() => acceptNotification(notif)} className="btn w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm">📅 일정에 추가</button>
                       <button onClick={() => dismissNotification(notif)} className="w-full py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm">✕ 수락 안 함</button>
                     </div>
+                    </>)}
                   </div>
                 ))
             )}

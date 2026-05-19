@@ -388,7 +388,7 @@ export default function Home() {
       }
 
       setUserGrade(ud?.grade ?? null)
-      await loadCalendarData(cu.id, ud?.grade ?? 0, admin)
+      await loadCalendarData(cu.id, ud?.grade ?? 0, admin, teacher)
 
       // 출석 체크 (선생님/관리자도 포함)
       checkAttendance(cu.id)
@@ -548,8 +548,8 @@ export default function Home() {
     setViewingLoading(false)
   }
 
-  const loadCalendarData = async (uid: string, grade: number, admin: boolean) => {
-    if (!admin) {
+  const loadCalendarData = async (uid: string, grade: number, admin: boolean, teacher = false) => {
+    if (!admin && !teacher) {
       const { data: missed } = await supabase.from('posts').select('id')
         .eq('status', 'approved').eq('is_user_generated', true)
         .or(`grade.is.null,grade.eq.${grade}`).neq('created_by', uid)
@@ -564,7 +564,7 @@ export default function Home() {
           .upsert(school.map(p => ({ user_id: uid, post_id: p.id, assigned_date: p.default_date, end_date: p.end_date ?? null })), { onConflict: 'user_id,post_id' })
     }
 
-    if (admin) {
+    if (admin || teacher) {
       const { data: allPosts } = await supabase.from('posts')
         .select('id, title, content, category, grade, default_date, end_date, created_by')
         .eq('status', 'approved')
@@ -611,7 +611,7 @@ export default function Home() {
       const existingDates = new Set(adminEvents.filter(e => e.category === '휴일').map(e => e.date))
       const filteredHolidays = holidays.filter(h => !existingDates.has(h.date))
       setEvents([...adminEvents, ...adminPersonalEvents, ...filteredHolidays])
-    } else {
+    } else if (!teacher) {
       const { data: personalCal } = await supabase
         .from('user_calendar').select('id, assigned_date, end_date, title, content, color')
         .eq('user_id', uid).eq('is_personal', true)
@@ -1055,7 +1055,7 @@ export default function Home() {
     setMyTeacherRow(t)
     setShowTeacherPicker(false)
     await loadMessages(user.id, false, true, t)
-    await loadCalendarData(user.id, userGrade ?? 0, false)
+    await loadCalendarData(user.id, userGrade ?? 0, false, true)
   }
 
   const selfAddTeacher = async () => {
@@ -1080,7 +1080,7 @@ export default function Home() {
     setSelfAddName(''); setSelfAddSubject(''); setSelfAddLocation('')
     await loadTeachers()
     await loadMessages(user.id, false, true, newT)
-    await loadCalendarData(user.id, userGrade ?? 0, false)
+    await loadCalendarData(user.id, userGrade ?? 0, false, true)
     showToast('등록됐어요! 이제 바로 이용할 수 있어요 😊')
     setSelfAddLoading(false)
   }
@@ -1257,7 +1257,7 @@ export default function Home() {
     await supabase.from('users').update({ grade }).eq('id', user.id)
     setUserGrade(grade); setShowGradePicker(false)
     setBoardGrade(grade)
-    await loadCalendarData(user.id, grade, isAdmin)
+    await loadCalendarData(user.id, grade, isAdmin, isTeacher)
   }
 
   const confirmTeacherAuth = async () => {
@@ -1519,6 +1519,12 @@ export default function Home() {
       if (!confirm('이 학교 일정을 삭제할까요? 모든 학생의 캘린더에서 삭제됩니다.')) return
       await supabase.from('user_calendar').delete().eq('post_id', eventId)
       await supabase.from('posts').update({ status: 'rejected' }).eq('id', eventId)
+    } else if (isAdmin || isTeacher) {
+      // 관리자/선생님: 모든 유저 캘린더에서 삭제 + post 거절 처리
+      if (!confirm('이 일정을 삭제할까요? 모든 학생의 캘린더에서 삭제됩니다.')) return
+      await supabase.from('user_calendar').delete().eq('post_id', eventId)
+      await supabase.from('posts').update({ status: 'rejected' }).eq('id', eventId)
+      await supabase.from('notifications').update({ status: 'dismissed', is_read: true }).eq('post_id', eventId)
     } else {
       if (!confirm('이 일정을 삭제할까요?')) return
       await supabase.from('user_calendar').delete().eq('user_id', user.id).eq('post_id', eventId)
@@ -2976,21 +2982,21 @@ export default function Home() {
                   const isSchoolEvent = event.category === '학교행사' || event.category === '휴일'
                   const isPersonal = event.is_personal === true
                   const isMyEvent = event.created_by === user?.id
-                  // 학교행사/휴일은 관리자만 삭제, 나머지는 본인 캘린더에서 누구나 삭제 가능
-                  const canDelete = isSchoolEvent ? isAdmin : true
+                  // 학교행사/휴일은 관리자/선생님만 삭제, 일반 일정은 관리자/선생님 또는 본인
+                  const canDelete = isSchoolEvent ? (isAdmin || isTeacher) : (isAdmin || isTeacher || true)
                   return (
                     <div key={event.id} className="card-hover p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`text-xs px-1.5 py-0.5 rounded-full ${getCategoryBadge(event.category)}`}>{event.category}</span>
-                          {isAdmin && event.grade && <span className="text-xs text-gray-400 dark:text-gray-500">{event.grade}학년</span>}
+                          {(isAdmin || isTeacher) && event.grade && <span className="text-xs text-gray-400 dark:text-gray-500">{event.grade}학년</span>}
                           {isPersonal && <span className="text-xs text-yellow-500">🔒 나만 보기</span>}
                         </div>
                         <p className="font-medium text-sm mt-0.5">{event.title.replace(/^\[\d학년\] /, '')}</p>
                         {event.content && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.content}</p>}
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
-                        {isSchoolEvent && isAdmin && (
+                        {isSchoolEvent && (isAdmin || isTeacher) && (
                           <button onClick={() => openEditSchoolEvent(event)}
                             className="btn text-blue-500 text-xs px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">수정</button>
                         )}

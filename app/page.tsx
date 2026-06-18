@@ -3312,7 +3312,7 @@ export default function Home() {
                 {/* 출석 랭킹 (이번 달) */}
                 {Object.keys(attendanceStats).length > 0 && (
                   <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">📅 이번 달 출석 랭킹 <span className="font-normal text-blue-500">(15일↑ 🏅 간식 대상)</span></p>
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">📅 이번 달 출석 랭킹 <span className="font-normal text-blue-500">(10일↑ 🏅 간식 대상)</span></p>
                     <div className="flex flex-col gap-1.5">
                       {allUsers
                         .filter(u => attendanceStats[u.id])
@@ -3325,9 +3325,9 @@ export default function Home() {
                                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
                               </span>
                               <span className="text-sm text-gray-700 dark:text-gray-300">{u.name}</span>
-                              {(attendanceStats[u.id] ?? 0) >= 15 && <span className="text-xs">🏅</span>}
+                              {(attendanceStats[u.id] ?? 0) >= 10 && <span className="text-xs">🏅</span>}
                             </div>
-                            <span className={`text-sm font-bold ${(attendanceStats[u.id] ?? 0) >= 15 ? 'text-yellow-500' : 'text-blue-500'}`}>
+                            <span className={`text-sm font-bold ${(attendanceStats[u.id] ?? 0) >= 10 ? 'text-yellow-500' : 'text-blue-500'}`}>
                               {attendanceStats[u.id]}일
                             </span>
                           </div>
@@ -3537,16 +3537,16 @@ export default function Home() {
                   )
                 })()}
 
-                {/* 15일 달성 진행바 */}
+                {/* 10일 달성 진행바 */}
                 <div className="mb-3">
                   <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
                     <span>간식 목표</span>
-                    <span>{Math.min(monthlyCount, 15)} / 15일</span>
+                    <span>{Math.min(monthlyCount, 10)} / 10일</span>
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                     <div
-                      className={`h-2.5 rounded-full transition-all duration-700 ${monthlyCount >= 15 ? 'bg-yellow-400' : 'bg-blue-400'}`}
-                      style={{ width: `${Math.min((monthlyCount / 15) * 100, 100)}%` }}
+                      className={`h-2.5 rounded-full transition-all duration-700 ${monthlyCount >= 10 ? 'bg-yellow-400' : 'bg-blue-400'}`}
+                      style={{ width: `${Math.min((monthlyCount / 10) * 100, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -3558,13 +3558,13 @@ export default function Home() {
                     <p className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
                       {isNewBadge ? '이번 달 간식 대상자! 🎊' : '이번 달 간식 대상자 ✓'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">15일 출석 달성 — 관리자가 간식을 드려요</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">10일 출석 달성 — 관리자가 간식을 드려요</p>
                   </div>
                 )}
 
                 {!hasBadge && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
-                    15일 출석 시 간식 대상자가 돼요 🍬
+                    10일 출석 시 간식 대상자가 돼요 🍬
                   </p>
                 )}
 

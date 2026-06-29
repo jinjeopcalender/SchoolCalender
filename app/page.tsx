@@ -461,10 +461,10 @@ export default function Home() {
     setMonthlyCount(cnt)
     setAttendedDates(attendedDates)
 
-    // 15일 달성 여부
+    // 10일 달성 여부
     const prevCount = cnt - 1
-    const newBadge = cnt >= 15 && prevCount < 15
-    setHasBadge(cnt >= 15)
+    const newBadge = cnt >= 10 && prevCount < 10
+    setHasBadge(cnt >= 10)
     setIsNewBadge(newBadge)
 
     // 출석 도장 화면 표시
